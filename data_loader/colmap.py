@@ -23,7 +23,7 @@ def get_cam_ray_dirs(camera):
 class COLMAPDataset:
     def __init__(self, datadir, split, downsample):
         assert downsample in [1, 2, 4, 8]
-
+        print(datadir)
         self.root_dir = datadir
         self.colmap_dir = os.path.join(datadir, "sparse/0/")
         self.split = split
