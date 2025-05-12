@@ -27,7 +27,7 @@ freeze_points: 18_000                  # Points are frozen after this cycle
 
 # Dataset Parameters
 dataset: "colmap"
-data_path: "data/db"
+data_path: "/mnt/hdd/team4/data/db"
 scene: "playroom"
 patch_based: false
 downsample: [2, 1]                     # Image downsample factors
