@@ -82,7 +82,7 @@ class DatasetParams(ParamGroup):
 
     def __init__(self, parser):
         self.dataset = "colmap"
-        self.data_path = "data/mipnerf360"
+        self.data_path = "/mnt/hdd/team4/data"
         self.scene = "bonsai"
         self.patch_based = False
         self.downsample = [4, 2, 1]
