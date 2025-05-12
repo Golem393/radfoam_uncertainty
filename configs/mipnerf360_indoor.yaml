@@ -27,7 +27,7 @@ freeze_points: 18_000                  # Points are frozen after this cycle
 
 # Dataset Parameters
 dataset: "colmap"
-data_path: "data/mipnerf360"
+data_path: "/mnt/hdd/team4/data/mipnerf360"
 scene: "bonsai"
 patch_based: false
 downsample: [4, 2]                     # Image downsample factors
