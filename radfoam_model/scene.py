@@ -62,6 +62,8 @@ class RadFoamScene(torch.nn.Module):
         primal_points = (
             torch.randn(self.num_init_points, 3, device=self.device) * 25
         )
+        print(self.num_init_points)
+        exit(10)
         self.triangulation = radfoam.Triangulation(primal_points)
         perm = self.triangulation.permutation().to(torch.long)
         primal_points = primal_points[perm]
