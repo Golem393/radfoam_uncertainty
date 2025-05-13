@@ -34,6 +34,10 @@ class RadFoamScene(torch.nn.Module):
         self.num_final_points = args.final_points
         self.activation_scale = args.activation_scale
 
+
+        print(self.num_init_points)
+        exit(10)
+
         if points is not None:
             self.initialize_from_pcd(points, points_colors)
         else:
@@ -62,8 +66,6 @@ class RadFoamScene(torch.nn.Module):
         primal_points = (
             torch.randn(self.num_init_points, 3, device=self.device) * 25
         )
-        print(self.num_init_points)
-        exit(10)
         self.triangulation = radfoam.Triangulation(primal_points)
         perm = self.triangulation.permutation().to(torch.long)
         primal_points = primal_points[perm]
