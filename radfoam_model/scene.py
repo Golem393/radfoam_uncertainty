@@ -34,10 +34,6 @@ class RadFoamScene(torch.nn.Module):
         self.num_final_points = args.final_points
         self.activation_scale = args.activation_scale
 
-
-        print(self.num_init_points)
-        exit(10)
-
         if points is not None:
             self.initialize_from_pcd(points, points_colors)
         else:
