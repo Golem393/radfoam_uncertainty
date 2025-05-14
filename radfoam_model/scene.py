@@ -8,6 +8,9 @@ import tqdm
 import radfoam
 from radfoam_model.render import TraceRays
 from radfoam_model.utils import *
+from radfoam_model.uncertainty import ComputeUncertainty
+from nerfstudio.field_components.encodings import HashEncoding
+
 
 
 class RadFoamScene(torch.nn.Module):
@@ -57,6 +60,20 @@ class RadFoamScene(torch.nn.Module):
         )
 
         self.pipeline = radfoam.create_pipeline(self.sh_degree, self.attr_dtype)
+
+        self.lod = 8
+        self.deform_field = HashEncoding(num_levels = 1, 
+                            min_res = 2**self.lod,
+                            max_res = 2**self.lod,
+                            log2_hashmap_size = self.lod*3+1, #simple regular grid (hash table size > grid size)
+                            features_per_level = 3,
+                            hash_init_scale = 0.,
+                            implementation = "torch",
+                            interpolation = "Linear")
+        self.deform_field.to(self.device)
+        self.deform_field.scalings = torch.tensor([2**self.lod]).to(self.device)
+
+        self.uncertainty = ComputeUncertainty()
 
     def random_initialize(self):
         primal_points = (
@@ -248,7 +265,7 @@ class RadFoamScene(torch.nn.Module):
             start_point = self.get_starting_point(rays, points, self.aabb_tree)
         else:
             start_point = torch.broadcast_to(start_point, rays.shape[:-1])
-        return TraceRays.apply(
+        rgba, depth, contribution, num_intersections, errbox = TraceRays.apply(
             self.pipeline,
             points,
             attributes,
@@ -259,6 +276,12 @@ class RadFoamScene(torch.nn.Module):
             depth_quantiles,
             return_contribution,
         )
+
+        rgb = rgba[..., :3]
+        offsets = self.uncertainty.get_unc_radfoam(points)
+        disstortion = nn.zeros_like(points)
+        hessian = self.find_uncertainty(points, offsets, rgb, disstortion) #TODO: pipeline.model.field.spatial_distortion)
+        return rgba, depth, contribution, num_intersections, errbox, hessian
 
     def update_viewer(self, viewer):
         points, attributes, point_adjacency, point_adjacency_offsets = (
