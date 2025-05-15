@@ -58,6 +58,10 @@ class DataHandler:
         self.alphas = getattr(
             split_dataset, "all_alphas", torch.ones_like(self.rgbs[..., 0:1])
         )
+        self.view_rays = self.rays
+        self.view_rgbs = self.rgbs
+        self.view_alphas = self.alphas
+
 
         self.viewer_up = get_up(self.c2ws)
         self.viewer_pos = self.c2ws[0, :3, 3]
@@ -126,3 +130,19 @@ class DataHandler:
             alpha_batch = alpha_batch_fetcher.next()
 
             yield ray_batch, rgb_batch, alpha_batch
+
+    def get_camera_batch(self, index):
+        rays = self.view_rays[index].view(-1, self.view_rays.shape[-1])  # (H*W, 6)
+        rgbs = self.view_rgbs[index].view(-1, self.view_rgbs.shape[-1])  # (H*W, 3)
+        alphas = self.view_alphas[index].view(-1, self.view_alphas.shape[-1])  # (H*W, 1)
+
+        if self.rays_per_batch < rays.shape[0]:  # sample subset if too large
+            perm = torch.randperm(rays.shape[0])[:self.rays_per_batch]
+            rays = rays[perm]
+            rgbs = rgbs[perm]
+            alphas = alphas[perm]
+
+        return rays.to(self.device), rgbs.to(self.device), alphas.to(self.device)
+
+    def __len__(self):
+        return self.view_rays.shape[0]
