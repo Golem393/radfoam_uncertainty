@@ -86,7 +86,7 @@ class ComputeUncertainty:
         offsets_1.requires_grad_(True)  # Critical for gradient flow
 
         deformed_points = self.trained_points + offsets_1
-        #model.primal_points.data.copy_(deformed_points)
+        model.primal_points.data.copy_(deformed_points)
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
@@ -171,7 +171,7 @@ class ComputeUncertainty:
         train_data_handler.reload(split="train", downsample=downsample)
 
         len_train = len(train_data_handler)
-        self.trained_points = model.primal_points.clone().detach()
+        self.trained_points = model.primal_points
         for i in range(len_train):
             print("step", i)
             ray_batch, rgb_batch, alpha_batch = train_data_handler.get_camera_batch(i)
