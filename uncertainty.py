@@ -86,7 +86,7 @@ class ComputeUncertainty:
         offsets_1.requires_grad_(True)  # Critical for gradient flow
 
         deformed_points = self.trained_points + offsets_1
-        model.primal_points.data.copy_(deformed_points)
+        #model.primal_points.data.copy_(deformed_points)
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
@@ -114,7 +114,7 @@ class ComputeUncertainty:
             "depth": depth,
         }
 
-        return outputs, model.primal_points, offsets_1
+        return outputs, deformed_points, offsets_1
 
 
 
