@@ -83,8 +83,8 @@ class ComputeUncertainty:
     def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch):
         # get the offsets from the deform field
         normalized_points = normalize_point_coords(self.trained_points)
-        offsets_1 = self.deform_field(normalized_points).clone().detach()
-        offsets_1.requires_grad = True
+        offsets_1 = self.deform_field(normalized_points)
+        offsets_1.requires_grad_(True)
         model.primal_points.data.copy_(self.trained_points + offsets_1)
 
         # Sample depths along the rays (optional for diversity)
