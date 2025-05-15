@@ -100,10 +100,10 @@ class ComputeUncertainty:
 
         # Extract opacity and apply white background if needed
         opacity = rgba_output[..., -1:]
-        if self.pipeline_args.white_background:
-            rgb_output = rgba_output[..., :3] + (1 - opacity)
-        else:
-            rgb_output = rgba_output[..., :3]
+        #if self.pipeline_args.white_background:
+        rgb_output = rgba_output[..., :3] + (1 - opacity)
+        #else:
+            #rgb_output = rgba_output[..., :3]
 
         outputs = {
             "rgb": rgb_output,
@@ -129,7 +129,8 @@ class ComputeUncertainty:
         model_params = ModelParams(parser)
         dataset_params = DatasetParams(parser)
         args = parser.parse_args()
-        self.pipeline_args = PipelineParams(parser).extract(args)
+        pipeline_params = PipelineParams(parser)
+        self.pipeline_args = pipeline_params.extract(args)
         self.device = torch.device(args.device)
 
         model = RadFoamScene(args=model_params.extract(args), device=self.device)
