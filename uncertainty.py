@@ -61,6 +61,7 @@ class ComputeUncertainty:
             param.requires_grad_(False)
 
         print(model.primal_points)
+        print(model.primal_points.size())
 
 
         '''if not self.deform_cov:
