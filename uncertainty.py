@@ -156,7 +156,6 @@ class ComputeUncertainty:
         self.deform_field.scalings = torch.tensor([2 ** self.lod]).to(self.device)
         print("Computing Hessian")
         start_time = time.time()
-        model.eval()
         for param in model.parameters():
             param.requires_grad_(False)
 
