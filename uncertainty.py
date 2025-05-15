@@ -82,6 +82,11 @@ class ComputeUncertainty:
         normalized_points = normalize_point_coords(self.trained_points)
         offsets_1 = self.deform_field(normalized_points).clone().detach()
         offsets_1.requires_grad = True
+        print(self.trained_points)
+        print(offsets_1)
+        #print shapes
+        print(self.trained_points.shape)
+        print(offsets_1.shape)
         model.primal_points = self.trained_points + offsets_1
 
         # Sample depths along the rays (optional for diversity)
