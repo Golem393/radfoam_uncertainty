@@ -5,8 +5,7 @@ from configs import *
 from radfoam_model.scene import RadFoamScene
 from nerfstudio.field_components.encodings import HashEncoding
 from data_loader import DataHandler
-from radfoam_model.utils import (find_grid_indices,
-                                        normalize_point_coords)
+from utils import (find_grid_indices, normalize_point_coords)
 import tqdm
 
 class ComputeUncertainty:
