@@ -22,7 +22,6 @@ class ComputeUncertainty:
 
 
     def find_uncertainty(self, points, deform_points_1, rgb):
-        deform_points_1.retain_grad()
         inds, coeffs = find_grid_indices(points, self.lod, self.device)
         # because deformation params are detached for each point on each ray from the grid, summation does not affect derivative
         colors = torch.sum(rgb, dim=0)
@@ -100,6 +99,9 @@ class ComputeUncertainty:
             ray_batch,
             depth_quantiles=depth_quantiles,
         )
+
+        #offsets_1.retain_grad()
+        #print()
 
         # Extract opacity and apply white background if needed
         opacity = rgba_output[..., -1:]
@@ -179,8 +181,6 @@ class ComputeUncertainty:
             if hasattr(self, 'deform_field'):
                 self.deform_field.zero_grad()
             outputs, points, offsets_1 = self.get_outputs(model, ray_batch, rgb_batch, alpha_batch)
-            print(outputs['rgb'].requires_grad)  # Should be True
-            print(outputs['rgb'].grad_fn)  # Should show a computation graph
 
             hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
             self.hessian += hessian.clone().detach()
