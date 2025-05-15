@@ -57,8 +57,8 @@ class ModelParams(ParamGroup):
 
     def __init__(self, parser):
         self.sh_degree = 3
-        self.init_points = 90_000#131_072
-        self.final_points = 500_000#2_097_152
+        self.init_points = 90_000  # 131_072
+        self.final_points = 500_000  # 2_097_15
         self.activation_scale = 1.0
         self.device = "cuda"
         super().__init__(parser, "Setting Model parameters")
@@ -82,9 +82,9 @@ class DatasetParams(ParamGroup):
 
     def __init__(self, parser):
         self.dataset = "colmap"
-        self.data_path = "data/mipnerf360"
+        self.data_path = "/mnt/hdd/team4/data/mipnerf360"
         self.scene = "bonsai"
         self.patch_based = False
-        self.downsample = [8,4,2]#[4, 2, 1]
+        self.downsample = [4, 2, 1]
         self.downsample_iterations = [0, 150, 500]
         super().__init__(parser, "Setting Dataset parameters")
