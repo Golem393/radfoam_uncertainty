@@ -128,6 +128,7 @@ class ComputeUncertainty:
         parser.add_argument(
             "-c", "--config", is_config_file=True, help="Path to config file"
         )
+        args = parser.parse_args()
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         model_params = ModelParams(parser)
         dataset_params = DatasetParams(parser)
