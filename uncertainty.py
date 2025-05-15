@@ -171,10 +171,10 @@ class ComputeUncertainty:
         train_data_handler.reload(split="train", downsample=downsample)
 
         len_train = len(train_data_handler)
-        self.trained_points = model.primal_points
+        self.trained_points = model.primal_points.clone().detach()
         for i in range(len_train):
             print("step", i)
-            ray_batch, rgb_batch, alpha_batch = train_data_handler.get_camera_batch(i)
+            ray_batch, rgb_batch, alpha_batch = train_data_handler.get_iter()#.get_camera_batch(i)
             model.zero_grad()
             if hasattr(self, 'deform_field'):
                 self.deform_field.zero_grad()
