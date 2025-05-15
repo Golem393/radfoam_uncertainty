@@ -155,8 +155,8 @@ class ComputeUncertainty:
         self.deform_field.scalings = torch.tensor([2 ** self.lod]).to(self.device)
         print("Computing Hessian")
         start_time = time.time()
-        for param in model.parameters():
-            param.requires_grad_(False)
+        #for param in model.parameters():
+            #param.requires_grad_(False)
 
         train_data_handler = DataHandler(
             dataset_params.extract(args), rays_per_batch=250_000, device=self.device
@@ -174,8 +174,7 @@ class ComputeUncertainty:
         self.trained_points = model.primal_points.clone().detach()
         for i in range(len_train):
             print("step", i)
-            data_iterator = train_data_handler.get_iter()
-            ray_batch, rgb_batch, alpha_batch = next(data_iterator)#.get_camera_batch(i)
+            ray_batch, rgb_batch, alpha_batch = train_data_handler.get_camera_batch(i)
             model.zero_grad()
             if hasattr(self, 'deform_field'):
                 self.deform_field.zero_grad()
