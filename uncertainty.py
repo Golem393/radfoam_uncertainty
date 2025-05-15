@@ -82,10 +82,11 @@ class ComputeUncertainty:
     def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch):
         # get the offsets from the deform field
         normalized_points = normalize_point_coords(self.trained_points)
-        offsets_1 = self.deform_field(normalized_points)
-        offsets_1 = offsets_1.clone().detach().requires_grad_(True)  # make it a new leaf
+        offsets_1 = self.deform_field(normalized_points)  # No .detach() here!
+        offsets_1.requires_grad_(True)  # Critical for gradient flow
 
-        model.primal_points.data.copy_(self.trained_points + offsets_1)
+        deformed_points = self.trained_points + offsets_1
+        model.primal_points.data.copy_(deformed_points)
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
@@ -112,8 +113,6 @@ class ComputeUncertainty:
             #"accumulation": accumulation,
             "depth": depth,
         }
-        print(outputs['rgb'].requires_grad)  # ✅ Should be True
-        print(outputs['rgb'].grad_fn)  # ✅ Should NOT be None
 
         return outputs, model.primal_points, offsets_1
 
@@ -176,9 +175,13 @@ class ComputeUncertainty:
         for i in range(len_train):
             print("step", i)
             ray_batch, rgb_batch, alpha_batch = train_data_handler.get_camera_batch(i)
-            outputs, points, offsets_1 = self.get_outputs(model, ray_batch, rgb_batch, alpha_batch)
-
             model.zero_grad()
+            if hasattr(self, 'deform_field'):
+                self.deform_field.zero_grad()
+            outputs, points, offsets_1 = self.get_outputs(model, ray_batch, rgb_batch, alpha_batch)
+            print(outputs['rgb'].requires_grad)  # Should be True
+            print(outputs['rgb'].grad_fn)  # Should show a computation graph
+
             hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
