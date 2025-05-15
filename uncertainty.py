@@ -25,6 +25,9 @@ class ComputeUncertainty:
         inds, coeffs = find_grid_indices(points, self.lod, self.device)
         # because deformation params are detached for each point on each ray from the grid, summation does not affect derivative
         colors = torch.sum(rgb, dim=0)
+
+        if deform_points_1.grad is not None:
+            deform_points_1.grad.zero_()
         colors[0].backward(retain_graph=True)
         r = deform_points_1.grad.clone().detach().view(-1, 3)
 
@@ -92,11 +95,10 @@ class ComputeUncertainty:
         )
 
         # Forward pass through the model to get RGBA
-        with torch.no_grad():
-            rgba_output, depth, ray_samples, _, _ = model(
-                ray_batch,
-                depth_quantiles=depth_quantiles,
-            )
+        rgba_output, depth, ray_samples, _, _ = model(
+            ray_batch,
+            depth_quantiles=depth_quantiles,
+        )
 
         # Extract opacity and apply white background if needed
         opacity = rgba_output[..., -1:]
@@ -174,6 +176,8 @@ class ComputeUncertainty:
             print("step", i)
             ray_batch, rgb_batch, alpha_batch = train_data_handler.get_camera_batch(i)
             outputs, points, offsets_1 = self.get_outputs(model, ray_batch, rgb_batch, alpha_batch)
+
+            model.zero_grad()
             hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
