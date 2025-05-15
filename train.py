@@ -18,7 +18,7 @@ from data_loader import DataHandler
 from configs import *
 from radfoam_model.scene import RadFoamScene
 from radfoam_model.utils import psnr
-import radfoam
+from uncertainty.uncertainty import ComputeUncertainty
 
 
 seed = 42
@@ -338,6 +338,8 @@ def main():
         optimization_params.extract(args),
         dataset_params.extract(args),
     )
+
+    ComputeUncertainty().main(args)
 
 
 if __name__ == "__main__":
