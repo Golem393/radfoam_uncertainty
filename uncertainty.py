@@ -22,12 +22,11 @@ class ComputeUncertainty:
 
 
     def find_uncertainty(self, points, deform_points_1, rgb):
+        deform_points_1.retain_grad()
         inds, coeffs = find_grid_indices(points, self.lod, self.device)
         # because deformation params are detached for each point on each ray from the grid, summation does not affect derivative
         colors = torch.sum(rgb, dim=0)
 
-        if deform_points_1.grad is not None:
-            deform_points_1.grad.zero_()
         colors[0].backward(retain_graph=True)
         r = deform_points_1.grad.clone().detach().view(-1, 3)
 
@@ -84,7 +83,8 @@ class ComputeUncertainty:
         # get the offsets from the deform field
         normalized_points = normalize_point_coords(self.trained_points)
         offsets_1 = self.deform_field(normalized_points)
-        offsets_1.requires_grad_(True)
+        offsets_1 = offsets_1.clone().detach().requires_grad_(True)  # make it a new leaf
+
         model.primal_points.data.copy_(self.trained_points + offsets_1)
 
         # Sample depths along the rays (optional for diversity)
@@ -112,6 +112,8 @@ class ComputeUncertainty:
             #"accumulation": accumulation,
             "depth": depth,
         }
+        print(outputs['rgb'].requires_grad)  # ✅ Should be True
+        print(outputs['rgb'].grad_fn)  # ✅ Should NOT be None
 
         return outputs, model.primal_points, offsets_1
 
