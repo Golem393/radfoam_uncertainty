@@ -20,7 +20,6 @@ class ComputeUncertainty:
     # deform covariance matrix
     deform_cov: bool = False
 
-
     def calc_hessian(self, model):
         print("Computing Hessian")
         start_time = time.time()
@@ -152,7 +151,7 @@ class ComputeUncertainty:
 
             self.calc_hessian(model)
 
-if name == "__main__":
+if __name__ == "__main__":
     compute_uncertainty = ComputeUncertainty()
     compute_uncertainty.main()
 
