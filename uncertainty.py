@@ -122,7 +122,9 @@ class ComputeUncertainty:
 
 
     def main(self):
-        parser = configargparse.ArgParser()
+        parser = configargparse.ArgParser(
+            default_config_files=["arguments/mipnerf360_outdoor_config.yaml"]
+        )
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         model_params = ModelParams(parser)
         dataset_params = DatasetParams(parser)
