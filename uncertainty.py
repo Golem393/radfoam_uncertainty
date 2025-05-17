@@ -16,8 +16,14 @@ device = torch.device(args.device)
 train_data_handler = DataHandler(
     dataset_params.extract(args), rays_per_batch=250_000, device=device
 )
-
-train_data_handler.reload(split="train")
+iter2downsample = dict(
+            zip(
+                dataset_params.extract(args).downsample_iterations,
+                dataset_params.extract(args).downsample,
+            )
+        )
+downsample = iter2downsample[0]
+train_data_handler.reload(split="train", downsample=downsample)
 
 len_train = len(train_data_handler)
 print(len_train)
