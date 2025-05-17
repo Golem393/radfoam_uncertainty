@@ -61,11 +61,9 @@ class TraceRays(torch.autograd.Function):
         grad_depth,
         grad_contribution,
         grad_num_intersections,
-        errbox_grad,
-        retain_graph=False,
+        errbox_grad
     ):
         print("Backward")
-        print(retain_graph)
         print(ctx)
         del grad_contribution
         del grad_num_intersections
@@ -102,7 +100,7 @@ class TraceRays(torch.autograd.Function):
         points_grad[~points_grad.isfinite()] = 0
         attr_grad[~attr_grad.isfinite()] = 0
 
-        del (
+        '''del (
             ctx.rays,
             ctx.start_point,
             ctx.pipeline,
@@ -112,7 +110,7 @@ class TraceRays(torch.autograd.Function):
             ctx.point_adjacency,
             ctx.point_adjacency_offsets,
             ctx.depth_quantiles,
-        )
+        )'''
         return (
             None,  # pipeline
             points_grad,  # _points

@@ -27,6 +27,9 @@ class ComputeUncertainty:
         colors = torch.sum(rgb, dim=0)
 
         colors[0].backward(retain_graph=True)
+        #r = torch.autograd.grad(colors[0], deform_points_1, retain_graph=True, create_graph=False)[0].view(-1, 3)
+        #g = torch.autograd.grad(colors[1], deform_points_1, retain_graph=True, create_graph=False)[0].view(-1, 3)
+        #b = torch.autograd.grad(colors[2], deform_points_1, retain_graph=False, create_graph=False)[0].view(-1, 3)
         r = deform_points_1.grad.clone().detach().view(-1, 3)
 
         deform_points_1.grad.zero_()
