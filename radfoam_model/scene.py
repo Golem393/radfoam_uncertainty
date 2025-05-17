@@ -239,6 +239,7 @@ class RadFoamScene(torch.nn.Module):
         start_point=None,
         depth_quantiles=None,
         return_contribution=False,
+        given_points = None
     ):
         points, attributes, point_adjacency, point_adjacency_offsets = (
             self.get_trace_data()
@@ -248,6 +249,8 @@ class RadFoamScene(torch.nn.Module):
             start_point = self.get_starting_point(rays, points, self.aabb_tree)
         else:
             start_point = torch.broadcast_to(start_point, rays.shape[:-1])
+        if given_points is not None:
+            points = given_points
         return TraceRays.apply(
             self.pipeline,
             points,

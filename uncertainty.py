@@ -86,8 +86,6 @@ class ComputeUncertainty:
         offsets_1.retain_grad()
 
         deformed_points = self.trained_points.clone().detach() + offsets_1
-        with torch.no_grad():
-            model.primal_points.copy_(deformed_points)
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
@@ -100,6 +98,7 @@ class ComputeUncertainty:
         rgba_output, depth, ray_samples, _, _ = model(
             ray_batch,
             depth_quantiles=depth_quantiles,
+            given_points = deformed_points
         )
 
         #offsets_1.retain_grad()
