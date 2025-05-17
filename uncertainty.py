@@ -7,6 +7,7 @@ from nerfstudio.field_components.encodings import HashEncoding
 from data_loader import DataHandler
 from utils.utils import (find_grid_indices, normalize_point_coords)
 import tqdm
+from radfoam_model.render import TraceRays
 
 class ComputeUncertainty:
     """Load a checkpoint, compute uncertainty, and save it to a npy file."""
@@ -25,20 +26,20 @@ class ComputeUncertainty:
         inds, coeffs = find_grid_indices(points, self.lod, self.device)
         # because deformation params are detached for each point on each ray from the grid, summation does not affect derivative
         colors = torch.sum(rgb, dim=0)
+        TraceRays.RETAIN_GRAPH = True
+        colors[0].backward(retain_graph=True)
+        r = deform_points_1.grad.clone().detach().view(-1, 3)
 
-        r = torch.autograd.grad(colors[0], deform_points_1, retain_graph=True, create_graph=False)[0].view(-1, 3)
-        g = torch.autograd.grad(colors[1], deform_points_1, retain_graph=True, create_graph=False)[0].view(-1, 3)
-        b = torch.autograd.grad(colors[2], deform_points_1, retain_graph=False, create_graph=False)[0].view(-1, 3)
+        deform_points_1.grad.zero_()
+        colors[1].backward(retain_graph=True)
+        g = deform_points_1.grad.clone().detach().view(-1, 3)
 
-        '''print("r unique", torch.unique(r))
-        print("g unique", torch.unique(g))
-        print("b unique", torch.unique(b))
-        print("r2 unique", torch.unique(r2))
-        print("g2 unique", torch.unique(g2))
-        print("b2 unique", torch.unique(b2))
-        exit(10) #
+        deform_points_1.grad.zero_()
+        TraceRays.RETAIN_GRAPH = False
+        colors[2].backward()
+        b = deform_points_1.grad.clone().detach().view(-1, 3)
 
-        deform_points_1.grad.zero_()'''
+        deform_points_1.grad.zero_()
 
         dmy = torch.arange(inds.shape[1], device=self.device)
         first = True
