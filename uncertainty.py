@@ -43,7 +43,7 @@ class ComputeUncertainty:
         print("r unique", torch.unique(r))
         print("g unique", torch.unique(g))
         print("b unique", torch.unique(b))
-        exit(10)
+        exit(10) #
 
         deform_points_1.grad.zero_()
 
