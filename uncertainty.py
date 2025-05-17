@@ -1,12 +1,6 @@
-from pathlib import Path
-import time
 import torch
 from configs import *
-from radfoam_model.scene import RadFoamScene
-from nerfstudio.field_components.encodings import HashEncoding
 from data_loader import DataHandler
-import tqdm
-from radfoam_model.render import TraceRays
 
 
 parser = configargparse.ArgParser(
@@ -14,6 +8,8 @@ parser = configargparse.ArgParser(
 )
 dataset_params = DatasetParams(parser)
 args = parser.parse_args()
+print(args)
+print(args.device)
 device = torch.device(args.device)
 
 train_data_handler = DataHandler(
