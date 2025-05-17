@@ -83,6 +83,7 @@ class ComputeUncertainty:
         normalized_points = normalize_point_coords(self.trained_points)
         offsets_1 = self.deform_field(normalized_points).clone().detach()
         offsets_1.requires_grad = True
+        offsets_1.retain_grad()
 
         deformed_points = self.trained_points + offsets_1
         model.primal_points.data = deformed_points
@@ -117,13 +118,6 @@ class ComputeUncertainty:
         }
 
         return outputs, deformed_points, offsets_1
-
-
-
-
-
-
-
 
 
     def main(self):
