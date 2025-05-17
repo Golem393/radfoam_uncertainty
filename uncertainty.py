@@ -86,7 +86,8 @@ class ComputeUncertainty:
         offsets_1.retain_grad()
 
         deformed_points = self.trained_points.clone().detach() + offsets_1
-        model.primal_points = deformed_points
+        with torch.no_grad():
+            model.primal_points.copy_(deformed_points)
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
