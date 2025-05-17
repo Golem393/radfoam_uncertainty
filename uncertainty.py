@@ -4,8 +4,9 @@ from data_loader import DataHandler
 
 
 parser = configargparse.ArgParser(
-    default_config_files=["arguments/mipnerf360_outdoor_config.yaml"]
-)
+    default_config_files=["arguments/mipnerf360_outdoor_config.yaml"])
+
+model_params = ModelParams(parser)
 dataset_params = DatasetParams(parser)
 args = parser.parse_args()
 print(args)
