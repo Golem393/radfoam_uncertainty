@@ -182,7 +182,8 @@ class ComputeUncertainty:
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
         print("Hessian", self.hessian)
-        print("Hessian shape", torch.sqrt(self.hessian.shape))
+        import math
+        print("Hessian shape sqrt:", math.sqrt(self.hessian.numel()))
         print("Hessian unique", torch.unique(self.hessian))
         print("Very small (<1e-10):", (hessian < 1e-10).sum().item())
         print("Small (1e-10 to 1e-3):", ((hessian >= 1e-10) & (hessian < 1e-3)).sum().item())
