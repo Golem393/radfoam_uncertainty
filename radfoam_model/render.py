@@ -63,6 +63,8 @@ class TraceRays(torch.autograd.Function):
         grad_num_intersections,
         errbox_grad,
     ):
+        print("Backward")
+        print(ctx)
         del grad_contribution
         del grad_num_intersections
         del errbox_grad

@@ -84,7 +84,7 @@ class ComputeUncertainty:
         offsets_1 = self.deform_field(normalized_points).clone().detach()
         offsets_1.requires_grad = True
 
-        deformed_points = self.trained_points.clone() + offsets_1
+        deformed_points = self.trained_points.clone().detach() + offsets_1
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
