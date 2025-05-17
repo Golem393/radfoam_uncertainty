@@ -172,7 +172,7 @@ class ComputeUncertainty:
         self.trained_points = model.primal_points.clone().detach()
         print(len_train)
         for i in range(len_train):
-            print("step", i)
+            #print("step", i)
             ray_batch, rgb_batch, alpha_batch = train_data_handler.get_camera_batch(i)
             model.zero_grad()
             if hasattr(self, 'deform_field'):
@@ -182,7 +182,7 @@ class ComputeUncertainty:
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
         print("Hessian", self.hessian)
-        print("Hessian shape", torch.sqrt(self.hessian.sqrt))
+        print("Hessian shape", torch.sqrt(self.hessian.shape))
         print("Hessian unique", torch.unique(self.hessian))
         print("Very small (<1e-10):", (hessian < 1e-10).sum().item())
         print("Small (1e-10 to 1e-3):", ((hessian >= 1e-10) & (hessian < 1e-3)).sum().item())
