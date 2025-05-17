@@ -174,7 +174,7 @@ class ComputeUncertainty:
             if hasattr(self, 'deform_field'):
                 self.deform_field.zero_grad()
             outputs, points, offsets_1 = self.get_outputs(model, ray_batch, rgb_batch, alpha_batch)
-
+            print(ray_batch)
             hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
