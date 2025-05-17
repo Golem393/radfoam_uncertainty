@@ -40,11 +40,10 @@ class ComputeUncertainty:
         colors[2].backward()
         b = deform_points_1.grad.clone().detach().view(-1, 3)
 
-        print("r", r)
-        print("g", g)
-        print("b", b)
         print("r unique", torch.unique(r))
-        #exit(10)
+        print("g unique", torch.unique(g))
+        print("b unique", torch.unique(b))
+        exit(10)
 
         deform_points_1.grad.zero_()
 
