@@ -239,10 +239,15 @@ class RadFoamScene(torch.nn.Module):
         start_point=None,
         depth_quantiles=None,
         return_contribution=False,
+        primal_points=None,
     ):
         points, attributes, point_adjacency, point_adjacency_offsets = (
             self.get_trace_data()
         )
+
+        if primal_points is not None:
+            points = primal_points
+            self.aabb_tree = radfoam.build_aabb_tree(points)
 
         if start_point is None:
             start_point = self.get_starting_point(rays, points, self.aabb_tree)

@@ -8,6 +8,7 @@ class ErrorBox:
 
 
 class TraceRays(torch.autograd.Function):
+    RETAIN_GRAPH = False
     @staticmethod
     def forward(
         ctx,
@@ -63,9 +64,10 @@ class TraceRays(torch.autograd.Function):
         grad_num_intersections,
         errbox_grad,
     ):
-        del grad_contribution
-        del grad_num_intersections
-        del errbox_grad
+        if not TraceRays.RETAIN_GRAPH:
+            del grad_contribution
+            del grad_num_intersections
+            del errbox_grad
 
         rays = ctx.rays
         start_point = ctx.start_point
@@ -98,17 +100,18 @@ class TraceRays(torch.autograd.Function):
         points_grad[~points_grad.isfinite()] = 0
         attr_grad[~attr_grad.isfinite()] = 0
 
-        del (
-            ctx.rays,
-            ctx.start_point,
-            ctx.pipeline,
-            ctx.rgba,
-            ctx.points,
-            ctx.attributes,
-            ctx.point_adjacency,
-            ctx.point_adjacency_offsets,
-            ctx.depth_quantiles,
-        )
+        if not TraceRays.RETAIN_GRAPH:
+            del (
+                ctx.rays,
+                ctx.start_point,
+                ctx.pipeline,
+                ctx.rgba,
+                ctx.points,
+                ctx.attributes,
+                ctx.point_adjacency,
+                ctx.point_adjacency_offsets,
+                ctx.depth_quantiles,
+            )
         return (
             None,  # pipeline
             points_grad,  # _points
