@@ -81,10 +81,10 @@ class ComputeUncertainty:
     def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch):
         # get the offsets from the deform field
         normalized_points = normalize_point_coords(self.trained_points)
-        offsets_1 = self.deform_field(normalized_points).clone().detach()
+        offsets_1 = self.deform_field(normalized_points).clone()
         offsets_1.requires_grad = True
 
-        deformed_points = self.trained_points.clone().detach() + offsets_1
+        deformed_points = self.trained_points.clone() + offsets_1
 
         # Sample depths along the rays (optional for diversity)
         depth_quantiles = (
@@ -174,7 +174,6 @@ class ComputeUncertainty:
             if hasattr(self, 'deform_field'):
                 self.deform_field.zero_grad()
             outputs, points, offsets_1 = self.get_outputs(model, ray_batch, rgb_batch, alpha_batch)
-            print(ray_batch)
             hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
