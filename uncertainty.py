@@ -101,7 +101,7 @@ class ComputeUncertainty:
         rgba_output, depth, ray_samples, _, _ = model(
             ray_batch,
             depth_quantiles=depth_quantiles,
-            given_points = deformed_points
+            primal_points=deformed_points
         )
 
         # Extract opacity and apply white background if needed
