@@ -112,7 +112,7 @@ class DataHandler:
                 num_elements = self.train_rays.shape[0]
                 self.num_batches = num_elements // self.batch_size
 
-    def get_iter(self, random=True, index=None):
+    def get_iter(self, random=True):
         shuffle = random
 
         ray_batch_fetcher = radfoam.BatchFetcher(
@@ -125,24 +125,12 @@ class DataHandler:
             self.train_alphas, self.batch_size, shuffle=shuffle
         )
 
-        if index is not None:
-            for _ in range(index):
-                ray_batch_fetcher.next()
-                rgb_batch_fetcher.next()
-                alpha_batch_fetcher.next()
-
+        while True:
             ray_batch = ray_batch_fetcher.next()
             rgb_batch = rgb_batch_fetcher.next()
             alpha_batch = alpha_batch_fetcher.next()
 
             yield ray_batch, rgb_batch, alpha_batch
-        else:
-            while True:
-                ray_batch = ray_batch_fetcher.next()
-                rgb_batch = rgb_batch_fetcher.next()
-                alpha_batch = alpha_batch_fetcher.next()
-
-                yield ray_batch, rgb_batch, alpha_batch
 
     def __len__(self):
         return self.num_batches
