@@ -245,12 +245,14 @@ class RadFoamScene(torch.nn.Module):
             self.get_trace_data()
         )
 
+        if given_points is not None:
+            points = given_points
+
         if start_point is None:
             start_point = self.get_starting_point(rays, points, self.aabb_tree)
         else:
             start_point = torch.broadcast_to(start_point, rays.shape[:-1])
-        if given_points is not None:
-            points = given_points
+
         return TraceRays.apply(
             self.pipeline,
             points,
