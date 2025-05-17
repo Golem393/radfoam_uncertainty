@@ -96,6 +96,7 @@ class DataHandler:
                 )
 
                 self.batch_size = self.rays_per_batch // (self.patch_size**2)
+                self.num_batches = self.train_rays.shape[0]
             else:
                 self.train_rays = einops.rearrange(
                     self.rays, "n h w r -> (n h w) r"
@@ -108,21 +109,40 @@ class DataHandler:
                 )
 
                 self.batch_size = self.rays_per_batch
+                num_elements = self.train_rays.shape[0]
+                self.num_batches = num_elements // self.batch_size
 
-    def get_iter(self):
+    def get_iter(self, random=True, index=None):
+        shuffle = random
+
         ray_batch_fetcher = radfoam.BatchFetcher(
-            self.train_rays, self.batch_size, shuffle=True
+            self.train_rays, self.batch_size, shuffle=shuffle
         )
         rgb_batch_fetcher = radfoam.BatchFetcher(
-            self.train_rgbs, self.batch_size, shuffle=True
+            self.train_rgbs, self.batch_size, shuffle=shuffle
         )
         alpha_batch_fetcher = radfoam.BatchFetcher(
-            self.train_alphas, self.batch_size, shuffle=True
+            self.train_alphas, self.batch_size, shuffle=shuffle
         )
 
-        while True:
+        if index is not None:
+            for _ in range(index):
+                ray_batch_fetcher.next()
+                rgb_batch_fetcher.next()
+                alpha_batch_fetcher.next()
+
             ray_batch = ray_batch_fetcher.next()
             rgb_batch = rgb_batch_fetcher.next()
             alpha_batch = alpha_batch_fetcher.next()
 
             yield ray_batch, rgb_batch, alpha_batch
+        else:
+            while True:
+                ray_batch = ray_batch_fetcher.next()
+                rgb_batch = rgb_batch_fetcher.next()
+                alpha_batch = alpha_batch_fetcher.next()
+
+                yield ray_batch, rgb_batch, alpha_batch
+
+    def __len__(self):
+        return self.num_batches
