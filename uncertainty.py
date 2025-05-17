@@ -182,6 +182,7 @@ class ComputeUncertainty:
         print("Saving Hessian")
         print("Hessian", self.hessian)
         print("Hessian shape", self.hessian.shape)
+        print("Hessian unique", torch.unique(self.hessian))
 
         end_time = time.time()
         print("Done")
