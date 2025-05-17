@@ -40,6 +40,11 @@ class ComputeUncertainty:
         colors[2].backward()
         b = deform_points_1.grad.clone().detach().view(-1, 3)
 
+        print("r", r)
+        print("g", g)
+        print("b", b)
+        exit(10)
+
         deform_points_1.grad.zero_()
 
         dmy = torch.arange(inds.shape[1], device=self.device)
