@@ -136,6 +136,7 @@ class ComputeUncertainty:
         model = RadFoamScene(args=model_params.extract(args), device=self.device)
 
         model.load_pt(f"{self.checkpoint_path}")
+        model.eval()
 
         #self.aabb = model.aabb_tree.to(self.device)
         self.hessian = torch.zeros(((2 ** self.lod) + 1) ** 3).to(self.device)
@@ -181,7 +182,7 @@ class ComputeUncertainty:
             self.hessian += hessian.clone().detach()
         print("Saving Hessian")
         print("Hessian", self.hessian)
-        print("Hessian shape", self.hessian.shape)
+        print("Hessian shape", torch.sqrt(self.hessian.sqrt))
         print("Hessian unique", torch.unique(self.hessian))
         print("Very small (<1e-10):", (hessian < 1e-10).sum().item())
         print("Small (1e-10 to 1e-3):", ((hessian >= 1e-10) & (hessian < 1e-3)).sum().item())
