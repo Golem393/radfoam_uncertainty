@@ -81,8 +81,8 @@ class ComputeUncertainty:
     def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch):
         # get the offsets from the deform field
         normalized_points = normalize_point_coords(self.trained_points)
-        offsets_1 = self.deform_field(normalized_points)  # No .detach() here!
-        offsets_1.requires_grad_(True)  # Critical for gradient flow
+        offsets_1 = self.deform_field(normalized_points).clone().detach()
+        offsets_1.requires_grad = True
 
         deformed_points = self.trained_points + offsets_1
         model.primal_points.data = deformed_points
