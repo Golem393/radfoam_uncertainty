@@ -183,6 +183,10 @@ class ComputeUncertainty:
         print("Hessian", self.hessian)
         print("Hessian shape", self.hessian.shape)
         print("Hessian unique", torch.unique(self.hessian))
+        print("Very small (<1e-10):", (hessian < 1e-10).sum().item())
+        print("Small (1e-10 to 1e-3):", ((hessian >= 1e-10) & (hessian < 1e-3)).sum().item())
+        print("Medium (1e-3 to 1e3):", ((hessian >= 1e-3) & (hessian < 1e3)).sum().item())
+        print("Large (>1e3):", (hessian >= 1e3).sum().item())
 
         end_time = time.time()
         print("Done")
