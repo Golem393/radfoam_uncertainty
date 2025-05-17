@@ -29,5 +29,6 @@ len_train = len(train_data_handler)
 print(len_train)
 for i in range(len_train):
     print("step", i)
+    print(train_data_handler.get_iter(random=True, index=i))
     ray_batch, rgb_batch, alpha_batch = train_data_handler.get_iter(random=True, index=i)
     print(ray_batch)
