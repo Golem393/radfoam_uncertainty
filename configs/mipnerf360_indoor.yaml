@@ -1,7 +1,7 @@
 # Model Parameters
 sh_degree: 3
-init_points: 131_072
-final_points: 2_097_152
+init_points: 90_000  #131_072
+final_points: 500_000 #2_097_152
 activation_scale: 1
 device: cuda
 
@@ -30,5 +30,5 @@ dataset: "colmap"
 data_path: "data/mipnerf360"
 scene: "bonsai"
 patch_based: false
-downsample: [4, 2]                     # Image downsample factors
+downsample: [8,4] #[4, 2]                    # Image downsample factors
 downsample_iterations: [0, 5_000]

@@ -58,7 +58,7 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
         )
     )
     train_data_handler = DataHandler(
-        dataset_args, rays_per_batch=1_000_000, device=device
+        dataset_args, rays_per_batch=250_000, device=device
     )
     downsample = iter2downsample[0]
     train_data_handler.reload(split="train", downsample=downsample)

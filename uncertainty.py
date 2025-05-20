@@ -149,7 +149,7 @@ class ComputeUncertainty:
 
         # Load the dataset
         train_data_handler = DataHandler(
-            self.dataset_params, rays_per_batch=1_000_000, device=self.device
+            self.dataset_params, rays_per_batch=250_000, device=self.device
         )
         iter2downsample = dict(
             zip(
