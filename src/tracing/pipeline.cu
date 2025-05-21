@@ -615,11 +615,12 @@ class CUDATracingPipeline : public Pipeline {
                        uint32_t num_depth_quantiles,
                        const float *depth_quantiles,
                        void *ray_rgba,
-                       float *quantile_dpeths,
+                       float *quantile_depths,
                        uint32_t *quantile_point_indices,
                        uint32_t *num_intersections,
                        void *point_contribution,
-                       float *point_uncertainties) override {
+                       float *point_uncertainties
+                    ) override {
 
         CUDAArray<Vec4h> adjacent_diff(point_adjacency_size + 32);
         prefetch_adjacent_diff(reinterpret_cast<const Vec3f *>(points),
@@ -647,10 +648,10 @@ class CUDATracingPipeline : public Pipeline {
             num_depth_quantiles,
             depth_quantiles,
             static_cast<attr_scalar *>(ray_rgba),
-            quantile_dpeths,
+            quantile_depths,
             quantile_point_indices,
             num_intersections,
-            static_cast<attr_scalar *>(point_contribution)
+            static_cast<attr_scalar *>(point_contribution),
             point_uncertainties);
     }
 
