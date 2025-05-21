@@ -114,7 +114,8 @@ py::object trace_forward(Pipeline &self,
                          std::optional<torch::Tensor> depth_quantiles_in,
                          py::object weight_threshold,
                          py::object max_intersections,
-                         bool return_contribution) {
+                         bool return_contribution,
+                         torch::Tensor uncertainty) {
     torch::Tensor points = points_in.contiguous();
     torch::Tensor attributes = attributes_in.contiguous();
     torch::Tensor point_adjacency = point_adjacency_in.contiguous();
@@ -122,6 +123,7 @@ py::object trace_forward(Pipeline &self,
         point_adjacency_offsets_in.contiguous();
     torch::Tensor rays = rays_in.contiguous();
     torch::Tensor start_point = start_point_in.contiguous();
+    torch::Tensor uncertainty = uncertainty.contiguous();
 
     validate_scene_data(self,
                         points_in,
@@ -247,7 +249,8 @@ py::object trace_forward(Pipeline &self,
             ? reinterpret_cast<uint32_t *>(output_depth_indices.data_ptr())
             : nullptr,
         reinterpret_cast<uint32_t *>(num_intersections.data_ptr()),
-        return_contribution ? output_contribution.data_ptr() : nullptr);
+        return_contribution ? output_contribution.data_ptr() : nullptr),
+        reinterpret_cast<const float *>(uncertainty.data_ptr());
 
     py::dict output_dict;
 
@@ -636,7 +639,8 @@ void init_pipeline_bindings(py::module &module) {
              py::arg("depth_quantiles") = py::none(),
              py::arg("weight_threshold") = py::none(),
              py::arg("max_intersections") = py::none(),
-             py::arg("return_contribution") = false)
+             py::arg("return_contribution") = false,
+             py::arg("uncertainty") = py::none())
         .def("trace_backward",
              trace_backward,
              py::arg("points"),

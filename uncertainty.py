@@ -171,6 +171,9 @@ class ComputeUncertainty:
             hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
             self.hessian += hessian.clone().detach()
 
+        with open(str(self.output_path), 'wb') as f:
+            np.save(f, self.hessian.cpu().numpy())
+
 
         print("Saving Hessian")
         print("Hessian", self.hessian)

@@ -240,6 +240,7 @@ class RadFoamScene(torch.nn.Module):
         depth_quantiles=None,
         return_contribution=False,
         primal_points=None,
+        uncertainty = None
     ):
         points, attributes, point_adjacency, point_adjacency_offsets = (
             self.get_trace_data()
@@ -263,6 +264,7 @@ class RadFoamScene(torch.nn.Module):
             start_point,
             depth_quantiles,
             return_contribution,
+            uncertainty
         )
 
     def update_viewer(self, viewer):

@@ -21,6 +21,7 @@ class TraceRays(torch.autograd.Function):
         start_point,
         depth_quantiles,
         return_contribution,
+        uncertainty
     ):
         ctx.rays = rays
         ctx.start_point = start_point
@@ -40,6 +41,7 @@ class TraceRays(torch.autograd.Function):
             start_point,
             depth_quantiles=depth_quantiles,
             return_contribution=return_contribution,
+            uncertainty=uncertainty
         )
         ctx.rgba = results["rgba"]
         ctx.depth_indices = results.get("depth_indices", None)

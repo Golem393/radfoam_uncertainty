@@ -27,7 +27,8 @@ __global__ void forward(TraceSettings settings,
                         float *__restrict__ quantile_depths,
                         uint32_t *__restrict__ quantile_point_indices,
                         uint32_t *__restrict__ num_intersections,
-                        attr_scalar *__restrict__ point_contribution) {
+                        attr_scalar *__restrict__ point_contribution,
+                        const float *__restrict__ point_uncertainties) {
 
     uint32_t thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (thread_idx >= num_rays)
@@ -56,6 +57,8 @@ __global__ void forward(TraceSettings settings,
 
     float transmittance = 1.0f;
     Vec3f accumulated_rgb = Vec3f::Zero();
+    float accumulated_uncertainty = 0.0f;
+    float total_weight = 0.0f;
 
     uint32_t current_quantile_idx = 0;
     float current_quantile;
@@ -81,6 +84,10 @@ __global__ void forward(TraceSettings settings,
             atomicAdd(point_contribution + point_idx, (attr_scalar)weight);
         }
         accumulated_rgb += weight * rgb_primal;
+        float uncertainty = point_uncertainties[point_idx];
+        float weighted_uncertainty = weight * uncertainty;
+        accumulated_uncertainty += weighted_uncertainty;
+        total_weight += weight;
 
         float next_transmittance = transmittance * (1 - alpha);
         while (current_quantile_idx < num_depth_quantiles &&
@@ -123,7 +130,10 @@ __global__ void forward(TraceSettings settings,
     for (uint32_t i = 0; i < 3; ++i) {
         ray_rgba[thread_idx * 4 + i] = attr_scalar(accumulated_rgb[i]);
     }
-    ray_rgba[thread_idx * 4 + 3] = attr_scalar(1 - transmittance);
+    //ray_rgba[thread_idx * 4 + 3] = attr_scalar(1 - transmittance);
+    float avg_uncertainty = total_weight > 0 ? accumulated_uncertainty / total_weight : 0.0f;
+    ray_rgba[thread_idx * 4 + 3] = attr_scalar(avg_uncertainty);  // Alpha = uncertainty
+
 
     if (num_intersections)
         num_intersections[thread_idx] = n;
@@ -608,7 +618,8 @@ class CUDATracingPipeline : public Pipeline {
                        float *quantile_dpeths,
                        uint32_t *quantile_point_indices,
                        uint32_t *num_intersections,
-                       void *point_contribution) override {
+                       void *point_contribution,
+                       float *point_uncertainties) override {
 
         CUDAArray<Vec4h> adjacent_diff(point_adjacency_size + 32);
         prefetch_adjacent_diff(reinterpret_cast<const Vec3f *>(points),
@@ -639,7 +650,8 @@ class CUDATracingPipeline : public Pipeline {
             quantile_dpeths,
             quantile_point_indices,
             num_intersections,
-            static_cast<attr_scalar *>(point_contribution));
+            static_cast<attr_scalar *>(point_contribution)
+            point_uncertainties);
     }
 
     void trace_backward(const TraceSettings &settings,
