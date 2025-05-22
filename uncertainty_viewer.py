@@ -27,7 +27,7 @@ def get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device, filte
 
 
     # get the background color  TODO
-    
+
     downscale_factor: float = 2.0
     width: int = 1280
     # width of the image
@@ -140,7 +140,7 @@ def main():
         
         # hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
         # self.hessian += hessian.clone().detach()
-
+        break
     uncertainty = outputs[:, 3]
 
 
