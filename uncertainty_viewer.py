@@ -11,6 +11,8 @@ from utils.utils import find_grid_indices
 from nerfstudio.cameras.cameras import Cameras
 from nerfstudio.model_components import renderers
 
+from PIL import Image
+
 
 def get_uncertainty(points, lod, un):
     inds, coeffs = find_grid_indices(points, lod, points.device)
@@ -136,12 +138,32 @@ def main():
     for i in range(len_train):
         ray_batch, rgb_batch, alpha_batch = next(data_iterator)
         # outputs, points, offsets_1 = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
-        outputs = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
+        output = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
         
         # hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
         # self.hessian += hessian.clone().detach()
         break
-    uncertainty = outputs[:, 3]
+
+    with torch.no_grad():
+        # White background
+        uncertainty = output[..., -1:]
+        rgb_output = output[..., :3] + (1 - uncertainty)
+        rgb_output = rgb_output.reshape(rgb_batch.shape).clip(0, 1)
+
+        img_psnr = psnr(rgb_output, rgb_batch).mean()
+        # psnr_list.append(img_psnr)
+        torch.cuda.synchronize()
+
+        error = np.uint8((rgb_output - rgb_batch).cpu().abs() * 255)
+        rgb_output = np.uint8(rgb_output.cpu() * 255)
+        rgb_batch = np.uint8(rgb_batch.cpu() * 255)
+
+        im = Image.fromarray(
+            np.concatenate([rgb_output, rgb_batch, error], axis=1)
+        )
+        im.save(
+            f"output/{img_psnr:.3f}.png"
+        )
 
 
 if __name__ == "__main__":
