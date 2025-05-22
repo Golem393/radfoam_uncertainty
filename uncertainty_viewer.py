@@ -1,17 +1,21 @@
 import torch
-from gsplat import spherical_harmonics
-from gsplat.project_gaussians import project_gaussians
-from gsplat.rasterize import rasterize_gaussians
+import configargparse
+from configs import *
+from radfoam_model.scene import RadFoamScene
+from radfoam_model.utils import psnr
+import radfoam
+import numpy as np
+from data_loader import DataHandler
+
+from utils.utils import find_grid_indices
 from nerfstudio.cameras.cameras import Cameras
 from nerfstudio.model_components import renderers
 
-from bayessplatting.utils.utils import find_grid_indices
 
-
-def get_uncertainty(self, points, lod, un):
+def get_uncertainty(points, lod, un):
     inds, coeffs = find_grid_indices(points, lod, points.device)
     cfs_2 = (coeffs ** 2) / torch.sum((coeffs ** 2), dim=0, keepdim=True)
-    uns = un[inds.long()]  # [8,N]
+    uns = un[inds.long()].squeeze() # [8,N]
     un_points = torch.sqrt(torch.sum((uns * cfs_2), dim=0)).unsqueeze(1)
 
     # for stability in volume rendering we use log uncertainty
@@ -19,23 +23,30 @@ def get_uncertainty(self, points, lod, un):
     return un_points
 
 
-def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch, filter_out: bool = False):
+def get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device, filter_out: bool = False):
 
 
     # get the background color  TODO
     
-
-    N = self.N
-    reg_lambda = 1e-4 / ((2 ** self.lod) ** 3)
-    H = self.hessian / N + reg_lambda
-    self.un = 1 / H
+    downscale_factor: float = 2.0
+    width: int = 1280
+    # width of the image
+    height: int = 720
+    # height of the image
+    N = 1000 * (
+            (width * height) / downscale_factor
+        ) 
+    lod = np.log2(round(hessian.shape[0] ** (1 / 3)) - 1)
+    reg_lambda = 1e-4 / ((2 ** lod) ** 3)
+    H = hessian / N + reg_lambda
+    un = 1 / H
 
     max_uncertainty = 6  # approximate upper bound of the function log10(1/(x+lambda)) when lambda=1e-4/(256^3) and x is the hessian
     min_uncertainty = -3  # approximate lower bound of that function (cutting off at hessian = 1000)
 
 
     primal_points = model.primal_points.clone().detach()
-    un_points = self.get_uncertainty(primal_points).view(-1)
+    un_points = get_uncertainty(primal_points, lod, un).view(-1)
 
     # Normalize the uncertainty values between 0 and 1
     un_points_min = un_points.min()
@@ -51,7 +62,7 @@ def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch, filter_out: bool
     #this is for radfoam
 
     depth_quantiles = (
-            torch.rand(*ray_batch.shape[:-1], 2, device=self.device)
+            torch.rand(*ray_batch.shape[:-1], 2, device=device)
             .sort(dim=-1, descending=True)
             .values
         )
@@ -60,10 +71,10 @@ def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch, filter_out: bool
     rgba_output, depth, ray_samples, _, _ = model(
         ray_batch,
         depth_quantiles=depth_quantiles,
-        primal_points = deformed_points,
+        # primal_points = deformed_points,
         uncertainty = un_points_cp
     )
-    print(rgba_output)
+    return rgba_output
     '''
     # Extract opacity and apply white background if needed
     opacity = rgba_output[..., -1:]
@@ -79,8 +90,8 @@ def get_outputs(self, model, ray_batch, rgb_batch, alpha_batch, filter_out: bool
     }
 '''
     
-    #return {"rgb": rgb, "depth": depth_im, "accumulation": alpha, "uncertainty": uncertainty_im,
-            #"background": background}  # type: ignore
+    # return {"rgb": rgb, "depth": depth_im, "accumulation": alpha, "uncertainty": uncertainty_im,
+    #         "background": background}  # type: ignore
 
 
 def main():
@@ -94,12 +105,43 @@ def main():
     dataset_params = DatasetParams(parser)
     args = parser.parse_args()
 
-    model = RadFoamScene(args=self.model_params, device=self.device)
-    model.load_pt(f"{self.checkpoint_path}")
-    model.eval()
-    hessian = 
+    device = torch.device(args.device)
 
-    
+    model = RadFoamScene(args=model_params, device=device)
+    model.load_pt(f"output/bonsai@44a5858d/model.pt")
+    # model.eval()
+    # open unc.npy for hessian
+    hessian = torch.tensor(np.load(str("unc.npy"))).to(device)
+
+    print("Computing Hessian")
+    # start_time = time.time()
+
+    # Load the dataset
+    train_data_handler = DataHandler(
+        dataset_params, rays_per_batch=250_000, device=device
+    )
+    iter2downsample = dict(
+        zip(
+            dataset_params.downsample_iterations,
+            dataset_params.downsample
+        )
+    )
+    downsample = iter2downsample[0]
+    train_data_handler.reload(split="train", downsample=downsample)
+
+
+    len_train = len(train_data_handler)
+    data_iterator = train_data_handler.get_iter()
+    print("Length of training data:", len_train)
+    for i in range(len_train):
+        ray_batch, rgb_batch, alpha_batch = next(data_iterator)
+        # outputs, points, offsets_1 = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
+        outputs = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
+        
+        # hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
+        # self.hessian += hessian.clone().detach()
+
+    uncertainty = outputs[:, 3]
 
 
 if __name__ == "__main__":

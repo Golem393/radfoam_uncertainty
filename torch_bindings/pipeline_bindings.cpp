@@ -123,7 +123,13 @@ py::object trace_forward(Pipeline &self,
         point_adjacency_offsets_in.contiguous();
     torch::Tensor rays = rays_in.contiguous();
     torch::Tensor start_point = start_point_in.contiguous();
+
     torch::Tensor uncertainty = uncertainty_in.contiguous();
+    // if (uncertainty_in.has_value()) { 
+    //     uncertainty = uncertainty_in.value().contiguous();
+    // } else {
+    //     uncertainty = torch::empty({0}, torch::dtype(at::kFloat).device(rays.device()));
+    // }
 
     validate_scene_data(self,
                         points_in,
