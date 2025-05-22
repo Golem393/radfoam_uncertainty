@@ -119,51 +119,34 @@ def main():
     # start_time = time.time()
 
     # Load the dataset
-    train_data_handler = DataHandler(
-        dataset_params, rays_per_batch=250_000, device=device
-    )
-    iter2downsample = dict(
-        zip(
-            dataset_params.downsample_iterations,
-            dataset_params.downsample
-        )
-    )
-    downsample = iter2downsample[0]
-    train_data_handler.reload(split="train", downsample=downsample)
+    test_data_handler = DataHandler(dataset_params, rays_per_batch=0, device=device)
+    test_data_handler.reload(split="test", downsample=min(dataset_params.downsample))
+    test_ray_batch_fetcher = radfoam.BatchFetcher(test_data_handler.rays, batch_size=1, shuffle=False)
+    test_rgb_batch_fetcher = radfoam.BatchFetcher(test_data_handler.rgbs, batch_size=1, shuffle=False)
 
 
-    len_train = len(train_data_handler)
-    data_iterator = train_data_handler.get_iter()
-    print("Length of training data:", len_train)
-    for i in range(len_train):
-        ray_batch, rgb_batch, alpha_batch = next(data_iterator)
+    ray_batch = test_ray_batch_fetcher.next()[0]  # [H*W, 6]
+    rgb_batch = test_rgb_batch_fetcher.next()[0]  # [H*W, 3]
+    alpha_batch = torch.ones_like(rgb_batch[..., :1])  # dummy alpha
+    #print("Length of training data:", len_train)
+    #for i in range(len_train):
+        #ray_batch, rgb_batch, alpha_batch = next(data_iterator)
         # outputs, points, offsets_1 = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
-        output = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
+    output = get_outputs(model, ray_batch, rgb_batch, alpha_batch, hessian, device)
         
         # hessian = self.find_uncertainty(points, offsets_1, outputs['rgb'].view(-1, 3))
         # self.hessian += hessian.clone().detach()
-        break
+        #break
 
     with torch.no_grad():
         # White background
-        uncertainty = output[..., -1:]
-        rgb_output = output[..., :3] + (1 - uncertainty)
-        rgb_output = rgb_output.reshape(rgb_batch.shape).clip(0, 1)
-
-        img_psnr = psnr(rgb_output, rgb_batch).mean()
-        # psnr_list.append(img_psnr)
-        torch.cuda.synchronize()
-
-        error = np.uint8((rgb_output - rgb_batch).cpu().abs() * 255)
-        rgb_output = np.uint8(rgb_output.cpu() * 255)
-        rgb_batch = np.uint8(rgb_batch.cpu() * 255)
-
-        im = Image.fromarray(
-            np.concatenate([rgb_output, rgb_batch, error], axis=1)
-        )
-        im.save(
-            f"output/{img_psnr:.3f}.png"
-        )
+        print(output.shape)
+        uncertainty = output[..., -1:].detach().cpu().numpy().squeeze(-1)
+        print(uncertainty.shape)
+        uncertainty = np.clip(uncertainty, 0, 1)  # ensure it's between 0-1
+        print(uncertainty.shape)
+        uncertainty_img = np.uint8(uncertainty * 255)
+        Image.fromarray(uncertainty_img, mode="L").save("output/uncertainty.png")
 
 
 if __name__ == "__main__":
