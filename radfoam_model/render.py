@@ -31,6 +31,8 @@ class TraceRays(torch.autograd.Function):
         ctx.attributes = _attributes
         ctx.point_adjacency = _point_adjacency
         ctx.point_adjacency_offsets = _point_adjacency_offsets
+        if uncertainty is None:
+            uncertainty = torch.zeros(1, device=ctx.points.device)
 
         results = pipeline.trace_forward(
             _points,
@@ -124,4 +126,5 @@ class TraceRays(torch.autograd.Function):
             None,  # start_point
             None,  # depth_quantiles
             None,  # return_contribution
+            None,  # uncertainty
         )

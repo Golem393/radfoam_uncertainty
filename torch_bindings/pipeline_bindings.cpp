@@ -125,11 +125,6 @@ py::object trace_forward(Pipeline &self,
     torch::Tensor start_point = start_point_in.contiguous();
 
     torch::Tensor uncertainty = uncertainty_in.contiguous();
-    // if (uncertainty_in.has_value()) { 
-    //     uncertainty = uncertainty_in.value().contiguous();
-    // } else {
-    //     uncertainty = torch::empty({0}, torch::dtype(at::kFloat).device(rays.device()));
-    // }
 
     validate_scene_data(self,
                         points_in,
@@ -138,6 +133,10 @@ py::object trace_forward(Pipeline &self,
                         point_adjacency_offsets_in);
 
     bool return_depth = depth_quantiles_in.has_value();
+    bool use_uncertainty = true;
+    if (uncertainty_in.size(0) == 1) {
+        use_uncertainty = false;
+    } 
 
     uint32_t num_points = points.size(0);
     uint32_t point_adjacency_size = point_adjacency.size(0);
@@ -256,7 +255,7 @@ py::object trace_forward(Pipeline &self,
             : nullptr,
         reinterpret_cast<uint32_t *>(num_intersections.data_ptr()),
         return_contribution ? output_contribution.data_ptr() : nullptr,
-        reinterpret_cast<float *>(uncertainty.data_ptr()));
+        use_uncertainty ? reinterpret_cast<float *>(uncertainty.data_ptr()) : nullptr);
 
     py::dict output_dict;
 

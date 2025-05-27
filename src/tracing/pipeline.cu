@@ -30,6 +30,7 @@ __global__ void forward(TraceSettings settings,
                         attr_scalar *__restrict__ point_contribution,
                         const float *__restrict__ point_uncertainties) {
 
+    bool use_uncertainty = point_uncertainties != nullptr;
     uint32_t thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (thread_idx >= num_rays)
         return;
@@ -84,9 +85,11 @@ __global__ void forward(TraceSettings settings,
             atomicAdd(point_contribution + point_idx, (attr_scalar)weight);
         }
         accumulated_rgb += weight * rgb_primal;
-        float uncertainty = point_uncertainties[point_idx];
-        float weighted_uncertainty = weight * uncertainty;
-        accumulated_uncertainty += weighted_uncertainty;
+        if (use_uncertainty) {  
+            float uncertainty = point_uncertainties[point_idx];
+            float weighted_uncertainty = weight * uncertainty;
+            accumulated_uncertainty += weighted_uncertainty;
+        }
         total_weight += weight;
 
         float next_transmittance = transmittance * (1 - alpha);
@@ -130,9 +133,13 @@ __global__ void forward(TraceSettings settings,
     for (uint32_t i = 0; i < 3; ++i) {
         ray_rgba[thread_idx * 4 + i] = attr_scalar(accumulated_rgb[i]);
     }
-    //ray_rgba[thread_idx * 4 + 3] = attr_scalar(1 - transmittance);
-    float avg_uncertainty = total_weight > 0 ? accumulated_uncertainty / total_weight : 0.0f;
-    ray_rgba[thread_idx * 4 + 3] = attr_scalar(avg_uncertainty);  // Alpha = uncertainty
+    if (use_uncertainty) {
+        float avg_uncertainty = total_weight > 0 ? accumulated_uncertainty / total_weight : 0.0f;
+        ray_rgba[thread_idx * 4 + 3] = attr_scalar(avg_uncertainty);  // Alpha = uncertainty
+    }
+    else {
+        ray_rgba[thread_idx * 4 + 3] = attr_scalar(1 - transmittance);
+    }
 
 
     if (num_intersections)

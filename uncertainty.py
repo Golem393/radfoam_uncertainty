@@ -9,6 +9,7 @@ from data_loader import DataHandler
 from utils.utils import (find_grid_indices, normalize_point_coords)
 from radfoam_model.render import TraceRays
 import math
+import numpy as np
 
 class ComputeUncertainty:
 
@@ -19,8 +20,8 @@ class ComputeUncertainty:
         self.dataset_params = dataset_params
         self.args = args
         self.device = torch.device(args.device)
-        self.checkpoint_path = f"output/bonsai@44a5858d/model.pt"
-        self.output_path = Path("unc.npy")
+        self.checkpoint_path = Path("output/bonsai@44a5858d")
+        self.output_path = self.checkpoint_path / "unc.npy"
         self.lod = 8
 
 
@@ -121,11 +122,9 @@ class ComputeUncertainty:
 
     def determine_hessian(self):
 
-        #self.output_path.parent.mkdir(parents=True, exist_ok=True)
-
         #initialize model
         model = RadFoamScene(args=self.model_params, device=self.device)
-        model.load_pt(f"{self.checkpoint_path}")
+        model.load_pt(f"{self.checkpoint_path}/model.pt")
         model.eval()
 
         #initialize hessian and deformation field
