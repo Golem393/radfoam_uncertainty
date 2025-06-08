@@ -8,6 +8,7 @@ import tqdm
 import radfoam
 from radfoam_model.render import TraceRays
 from radfoam_model.utils import *
+import gc
 
 
 class RadFoamScene(torch.nn.Module):
@@ -248,6 +249,7 @@ class RadFoamScene(torch.nn.Module):
 
         if primal_points is not None:
             points = primal_points
+            self.update_triangulation(rebuild=True)
             self.aabb_tree = radfoam.build_aabb_tree(points)
 
         if start_point is None:
@@ -425,6 +427,86 @@ class RadFoamScene(torch.nn.Module):
         self.att_dc = optimizable_tensors["att_dc"]
         self.att_sh = optimizable_tensors["att_sh"]
         self.density = optimizable_tensors["density"]
+
+    def prune_from_mask(self, keep_mask, upsample_factor=1.2):
+        with torch.no_grad():
+            num_curr_points = self.primal_points.shape[0]
+            num_new_points = int((upsample_factor - 1) * num_curr_points)
+
+            points, _, point_adjacency, point_adjacency_offsets = (
+                self.get_trace_data()
+            )
+            ################### Farthest neighbor ###################
+            farthest_neighbor, cell_radius = radfoam.farthest_neighbor(
+                points,
+                point_adjacency,
+                point_adjacency_offsets,
+            )
+            farthest_neighbor = farthest_neighbor.long()
+
+            ######################## Pruning ########################
+            # Directly use the provided keep_mask to determine which points to prune
+            prune_mask = ~keep_mask
+            
+            # Additional pruning based on cell size (kept from original)
+            cell_size_mask = cell_radius < 1e-1
+            prune_mask = prune_mask & cell_size_mask
+
+            ######################## Random sampling ########################
+            perturbation = 0.25 * (points[farthest_neighbor] - points)
+            delta = torch.randn_like(perturbation)
+            delta /= delta.norm(dim=-1, keepdim=True)
+            perturbation += (
+                0.1 * perturbation.norm(dim=-1, keepdim=True) * delta
+            )
+
+            # Sample new points from all current points (not just error-based)
+            # Using uniform probability since we don't have error information
+            num_sample_points = num_new_points
+            sampled_inds = torch.multinomial(
+                torch.ones(num_curr_points, device=points.device),
+                num_sample_points,
+                replacement=False,
+            )
+            sampled_points = (points + perturbation)[sampled_inds]
+
+            new_params = {
+                "primal_points": sampled_points,
+                "att_dc": self.att_dc[sampled_inds],
+                "att_sh": self.att_sh[sampled_inds],
+                "density": self.density[sampled_inds],
+            }
+
+            # Don't prune the newly added points
+            prune_mask = torch.cat(
+                (
+                    prune_mask,
+                    torch.zeros(
+                        sampled_points.shape[0],
+                        device=prune_mask.device,
+                        dtype=bool,
+                    ),
+                )
+            )
+
+            self.densification_postfix(new_params)
+            self.prune_points(prune_mask)
+            self.update_triangulation(rebuild=True)
+            gc.collect()
+
+
+        """
+        assert keep_mask.dim() == 1 and keep_mask.dtype == torch.bool, "keep_mask must be a 1D boolean tensor"
+
+        # Apply mask to all relevant attributes
+        model.primal_points = nn.Parameter(model.primal_points[keep_mask])
+        model.att_dc = nn.Parameter(model.att_dc[keep_mask])
+        model.att_sh = nn.Parameter(model.att_sh[keep_mask])
+        model.density = nn.Parameter(model.density[keep_mask])
+        #model.point_adjacency = model.point_adjacency[keep_mask]
+        #model.point_adjacency_offsets = model.point_adjacency_offsets[keep_mask]
+        model.update_triangulation(rebuild=True)"""
+
 
     def prune_and_densify(
         self, point_error, point_contribution, upsample_factor=1.2

@@ -18,7 +18,7 @@ np.random.seed(seed)
 
 
 def viewer(args, pipeline_args, model_args, optimizer_args, dataset_args):
-    checkpoint = args.config.replace("/config.yaml", "")
+    checkpoint = args.checkpoint
     device = torch.device(args.device)
 
     test_data_handler = DataHandler(
@@ -38,7 +38,7 @@ def viewer(args, pipeline_args, model_args, optimizer_args, dataset_args):
         args=model_args, device=device, attr_dtype=torch.float16
     )
 
-    model.load_pt(f"{checkpoint}/model.pt")
+    model.load_pt(f"{checkpoint}")
 
     def viewer_init(viewer):
         model.update_viewer(viewer)
@@ -54,9 +54,9 @@ def main():
     pipeline_params = PipelineParams(parser)
     optimization_params = OptimizationParams(parser)
 
-    # Add argument to specify a custom config file
+    # Add argument to specify a custom checkpoint file
     parser.add_argument(
-        "-c", "--config", is_config_file=True, help="Path to config file"
+        "-c", "--checkpoint", help="Path to checkpoint file", default="output/bonsai@44a5858d/model.pt"
     )
 
     # Parse arguments

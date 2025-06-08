@@ -20,7 +20,7 @@ np.random.seed(seed)
 
 
 def test(args, pipeline_args, model_args, optimizer_args, dataset_args):
-    checkpoint = args.config.replace("/config.yaml", "")
+    checkpoint = args.checkpoint
     os.makedirs(os.path.join(checkpoint, "test"), exist_ok=True)
     device = torch.device(args.device)
 
@@ -101,7 +101,7 @@ def main():
 
     # Add argument to specify a custom config file
     parser.add_argument(
-        "-c", "--config", is_config_file=True, help="Path to config file"
+        "-c", "--checkpoint", help="Path to checkpoint file", default="output/bonsai@44a5858d"
     )
 
     # Parse arguments

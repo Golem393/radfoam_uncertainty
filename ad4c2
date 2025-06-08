@@ -1,0 +1,42 @@
+conda create --name radfoam python=3.10
+conda activate radfoam
+
+git clone --recursive https://github.com/theialab/radfoam
+pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu121
+cd radfoam
+pip install -r requirements.txt
+export CUDA_HOME=/usr/local/cuda-12.2
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+
+
+mkdir build
+cd build
+cmake ..
+make install
+
+git submodule update --init --recursive
+
+
+set(CMAKE_CUDA_ARCHITECTURES 86)
+
+
+conda install -c conda-forge xorg-libxcursor
+conda install -c conda-forge xorg-libxinerama xorg-libx11
+conda install -c conda-forge xorg-libxi
+conda install -c conda-forge xorg-libxinerama xorg-libx11 xorg-libxext
+conda install -c conda-forge libstdcxx-ng
+
+
+
+
+pip install nerfstudio
+
+
+locally add
+nano ~/.ssh/config
+X11Forwarding yes
+X11UseLocalhost yes
+
+
+
