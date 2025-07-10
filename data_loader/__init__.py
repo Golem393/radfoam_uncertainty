@@ -8,11 +8,15 @@ import radfoam
 
 from .colmap import COLMAPDataset
 from .blender import BlenderDataset
+from .nerfbuster import NerfbusterDataset, visualize_vol_rend_plt
+
+from xvfbwrapper import Xvfb
 
 
 dataset_dict = {
     "colmap": COLMAPDataset,
     "blender": BlenderDataset,
+    "nerfbuster": NerfbusterDataset,
 }
 
 
@@ -50,6 +54,52 @@ class DataHandler:
             )
         else:
             split_dataset = dataset(data_dir, split=split)
+
+                
+        # Example: use the first image (idx = 0)
+        # idx = 0
+
+        # pose = split_dataset.poses[idx].cpu().numpy()
+        # K = split_dataset.intrinsics.cpu().numpy()
+        # rays = split_dataset.all_rays[idx].reshape(-1, 6).cpu().numpy()
+        # centers = rays[:, :3]      # (H*W, 3)
+        # directions = rays[:, 3:]   # (H*W, 3)
+
+        # # Near/far for each ray (set as needed)
+        # t_min = np.zeros((centers.shape[0],), dtype=np.float32)
+        # t_max = np.ones((centers.shape[0],), dtype=np.float32) * 5.0
+
+        # # Image size
+        # latent_hw = (split_dataset.img_wh[1], split_dataset.img_wh[0])  # (H, W)
+
+        # # Bounding box (example, set as needed)
+        # bbox = np.array([[-1, -1, -1], [1, 1, 1]], dtype=np.float32)
+
+        # # Grid points (example, set as needed)
+        # grid_points = np.random.uniform(-1, 1, (1000, 3)).astype(np.float32)
+
+        # # Optionally subsample rays for visualization
+        # n_vis = 500
+        # idxs = np.random.choice(centers.shape[0], n_vis, replace=False)
+        # vis_rays = directions[idxs]
+        # vis_centers = centers[idxs]
+        # vis_t_min = t_min[idxs]
+        # vis_t_max = t_max[idxs]
+
+        # # Now you can call your visualizer
+        # # with Xvfb(width=1400, height=900, colordepth=24):
+        # visualize_vol_rend_plt(
+        #     rays=vis_rays,
+        #     centers=vis_centers,
+        #     t_min=vis_t_min,
+        #     t_max=vis_t_max,
+        #     grid_points=grid_points,
+        #     pose=[pose],         # List of poses for each camera to visualize
+        #     K=[K],               # List of intrinsics for each camera
+        #     latent_hw=latent_hw,
+        #     bbox=bbox
+        # )
+
         self.img_wh = split_dataset.img_wh
         self.fx = split_dataset.fx
         self.fy = split_dataset.fy
