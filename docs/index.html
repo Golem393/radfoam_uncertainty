@@ -82,13 +82,10 @@
 
       const folder = currentView === 'pixel' ? 'videos_640p' : 'videos_640p_cell';
       function formatThreshold(value) {
-        // Ensure that 0.0, 1.0 are formatted as 0.0, 1.0 not 0.0, 1.0.
-        // Also ensure that 0.4 is formatted as 0.4 not 0.40000000000000000002
-        return (Math.round(value * 10) / 10).toFixed(1);
+        return value % 1 === 0 ? value.toFixed(1) : value.toString();
       }
 
-
-      const rawThreshold = thresholds[currentView][parseInt(slider.value)];
+      const rawThreshold = thresholds[currentView][slider.value];
       const thresholdStr = formatThreshold(rawThreshold);
 
       for (let cfg = 0; cfg < 6; cfg++) {
