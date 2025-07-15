@@ -39,74 +39,34 @@
     };
 
     let currentView = 'pixel';
-    let videoElements = []; // Array to hold video elements
-    let currentVideoIndex = 0; // Index of the currently playing video
-
-    const playNextVideo = () => {
-      if (videoElements.length === 0) return;
-
-      // Pause current video if any
-      if (videoElements[currentVideoIndex]) {
-        videoElements[currentVideoIndex].pause();
-      }
-
-      // Move to the next video, or loop back to the first
-      currentVideoIndex = (currentVideoIndex + 1) % videoElements.length;
-
-      // Play the next video
-      videoElements[currentVideoIndex].play();
-    };
 
     const updateSlider = () => {
       const list = thresholds[currentView];
       slider.min = 0;
       slider.max = list.length - 1;
       slider.step = 1;
-
-      // Set default value for pixel view to 0.4
-      if (currentView === 'pixel') {
-        const defaultPixelThreshold = 0.4;
-        const defaultIndex = list.indexOf(defaultPixelThreshold);
-        slider.value = defaultIndex !== -1 ? defaultIndex : 0; // Fallback to 0 if 0.4 not found
-      } else {
-        slider.value = 0; // Reset for cell view
-      }
-
-      valueLabel.textContent = list[parseInt(slider.value)].toFixed(2);
+      slider.value = 0;
+      valueLabel.textContent = list[0].toFixed(2);
     };
 
-    const loadVideos = () => {
+    const loadVideos = (threshold) => {
       videoContainer.innerHTML = '';
-      videoElements = []; // Clear the array
-      currentVideoIndex = 0; // Reset index
-
       const folder = currentView === 'pixel' ? 'videos_640p' : 'videos_640p_cell';
       function formatThreshold(value) {
-        // Ensure that 0.0, 1.0 are formatted as 0.0, 1.0 not 0.0, 1.0.
-        // Also ensure that 0.4 is formatted as 0.4 not 0.40000000000000000002
-        return (Math.round(value * 10) / 10).toFixed(1);
+        return value % 1 === 0 ? value.toFixed(1) : value.toString();
       }
 
-
-      const rawThreshold = thresholds[currentView][parseInt(slider.value)];
+      const rawThreshold = thresholds[currentView][slider.value];
       const thresholdStr = formatThreshold(rawThreshold);
 
       for (let cfg = 0; cfg < 6; cfg++) {
         const video = document.createElement('video');
         video.src = `${folder}/video360_thresh_${thresholdStr}_cfg_${cfg}.mp4`;
-        video.muted = true; // Still keep muted for initial loading
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
         video.controls = true;
-        video.dataset.index = cfg; // Store index for later use
         videoContainer.appendChild(video);
-        videoElements.push(video); // Add to our array
-
-        // Add event listener for sequential playback
-        video.addEventListener('ended', playNextVideo);
-      }
-
-      // Start playing the first video
-      if (videoElements.length > 0) {
-        videoElements[currentVideoIndex].play();
       }
     };
 
@@ -118,7 +78,7 @@
       const idx = parseInt(slider.value);
       const threshold = thresholds[currentView][idx];
       valueLabel.textContent = threshold.toFixed(2);
-      loadVideos(); // No need to pass threshold, it's read from slider
+      loadVideos(threshold);
     };
 
     slider.addEventListener('input', updateVideos);
@@ -131,9 +91,8 @@
 
     // Initial setup
     viewSelector.value = currentView;
-    updateTitle(); // Set initial title
-    updateSlider(); // Set initial slider value and label
-    updateVideos(); // Load and play initial videos
+    updateSlider();
+    updateVideos();
   </script>
 </body>
 </html>
