@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Threshold Video Viewer</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
+    .video-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+    video { width: 300px; height: auto; border: 1px solid #ccc; }
+    select, input[type="range"] { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1 id="mainTitle">Threshold by Pixel</h1>
+
+  <label for="viewSelector">View:</label>
+  <select id="viewSelector">
+    <option value="pixel">Pixel</option>
+    <option value="cell">Cell</option>
+  </select>
+
+  <br/><br/>
+
+  <label for="thresholdSlider">Threshold: <span id="thresholdValue">0.0</span></label><br/>
+  <input type="range" id="thresholdSlider"/>
+
+  <div class="video-grid" id="videoContainer"></div>
+
+  <script>
+    const videoContainer = document.getElementById('videoContainer');
+    const slider = document.getElementById('thresholdSlider');
+    const valueLabel = document.getElementById('thresholdValue');
+    const viewSelector = document.getElementById('viewSelector');
+    const mainTitle = document.getElementById('mainTitle');
+
+    const thresholds = {
+      pixel: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+      cell:  [0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.6, 0.8, 1.0]
+    };
+
+    let currentView = 'pixel';
+
+    const updateSlider = () => {
+      const list = thresholds[currentView];
+      slider.min = 0;
+      slider.max = list.length - 1;
+      slider.step = 1;
+      slider.value = 0;
+      valueLabel.textContent = list[0].toFixed(2);
+    };
+
+    const loadVideos = (threshold) => {
+      videoContainer.innerHTML = '';
+      const folder = currentView === 'pixel' ? 'videos_640p' : 'videos_640p_cell';
+      function formatThreshold(value) {
+        return value % 1 === 0 ? value.toFixed(1) : value.toString();
+      }
+
+      const rawThreshold = thresholds[currentView][slider.value];
+      const thresholdStr = formatThreshold(rawThreshold);
+
+      for (let cfg = 0; cfg < 6; cfg++) {
+        const video = document.createElement('video');
+        video.src = `${folder}/video360_thresh_${thresholdStr}_cfg_${cfg}.mp4`;
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+        video.controls = true;
+        videoContainer.appendChild(video);
+      }
+    };
+
+    const updateTitle = () => {
+      mainTitle.textContent = currentView === 'pixel' ? 'Threshold by Pixel' : 'Threshold by Cell';
+    };
+
+    const updateVideos = () => {
+      const idx = parseInt(slider.value);
+      const threshold = thresholds[currentView][idx];
+      valueLabel.textContent = threshold.toFixed(2);
+      loadVideos(threshold);
+    };
+
+    slider.addEventListener('input', updateVideos);
+    viewSelector.addEventListener('change', () => {
+      currentView = viewSelector.value;
+      updateTitle();
+      updateSlider();
+      updateVideos();
+    });
+
+    // Initial setup
+    viewSelector.value = currentView;
+    updateSlider();
+    updateVideos();
+  </script>
+</body>
+</html>
