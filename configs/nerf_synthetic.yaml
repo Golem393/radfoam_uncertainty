@@ -1,7 +1,7 @@
 # Model Parameters
 sh_degree: 3
-init_points: 131_072  #131_072 #90_000
-final_points: 1_500_000 #2_097_152 #500_000
+init_points: 90_000  #131_072
+final_points: 500_000 #2_097_152
 activation_scale: 1
 device: cuda
 
@@ -26,9 +26,9 @@ sh_factor: 0.02
 freeze_points: 18_000                  # Points are frozen after this cycle
 
 # Dataset Parameters
-dataset: "nerfbuster"
-data_path : "/mnt/hdd/team4/data/LF"
-scene: "africa"
+dataset: "blender"
+data_path : "/mnt/hdd/team4/data/nerf_synthetic"
+scene: "lego"
 patch_based: false
-downsample: [2, 1] #[4, 2]                    # Image downsample factors
+downsample: [2,1] #[4, 2]                    # Image downsample factors
 downsample_iterations: [0, 5_000]

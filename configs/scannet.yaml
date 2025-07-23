@@ -1,7 +1,7 @@
 # Model Parameters
 sh_degree: 3
 init_points: 131_072  #131_072 #90_000
-final_points: 1_500_000 #2_097_152 #500_000
+final_points: 1_000_000 #2_097_152 #500_000
 activation_scale: 1
 device: cuda
 
@@ -26,9 +26,9 @@ sh_factor: 0.02
 freeze_points: 18_000                  # Points are frozen after this cycle
 
 # Dataset Parameters
-dataset: "nerfbuster"
-data_path : "/mnt/hdd/team4/data/LF"
-scene: "africa"
+dataset: "colmap"
+data_path : "/mnt/hdd/team4/data/scannet/raw_data"
+scene: "scene0079_00"
 patch_based: false
-downsample: [2, 1] #[4, 2]                    # Image downsample factors
+downsample: 1 #[4, 2]                    # Image downsample factors
 downsample_iterations: [0, 5_000]
