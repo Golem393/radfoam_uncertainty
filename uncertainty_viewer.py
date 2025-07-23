@@ -77,7 +77,6 @@ class UncertaintyViewer:
             bins = torch.tensor([0.0, 0.25, 0.5, 0.75, 1.0])
             hist = torch.histc(self.un_points_cp, bins=len(bins)-1, min=0.0, max=1.0)
 
-            # Print frequency for each bin range
             print(f"Min: {self.un_points_cp.min()}, Max: {self.un_points_cp.max()}")
 
             for i in range(len(hist)):
@@ -85,19 +84,16 @@ class UncertaintyViewer:
             print(f"Leaving {valid_indices.sum().item()} points out of {primal_points.shape[0]} based on uncertainty threshold {self.filter_thresh}")
             prune_mask = torch.zeros(primal_points.shape[0], dtype=torch.bool, device=self.device)
             prune_mask[valid_indices] = True
-            #self.model.prune_points(prune_mask)
             self.un_points_cp = self.un_points_cp[valid_indices]
             self.model.prune_from_mask(prune_mask, 1.01)
             if self.save_model:
                 self.model.save_pt(os.path.join(self.output_folder, f"model_pruned_{self.filter_thresh}.pt"))
             print(f"Pruned points shape: {self.model.primal_points.shape}")
-            #primal_points = primal_points[valid_indices]
 
     def get_outputs(self, ray_batch):
         depth_quantiles = torch.rand(*ray_batch.shape[:-1], 2, device=self.device).sort(dim=-1, descending=True).values
         rgba_output, depth, ray_samples, _, _ = self.model(
             ray_batch,
-            #depth_quantiles=depth_quantiles,
             uncertainty=self.un_points_cp
         )
         return rgba_output

@@ -571,15 +571,11 @@ class RadFoamScene(torch.nn.Module):
                 chunk_mask = chunk_uncert < uncert_threshold
                 #chunk_uncert = uncert_norm [i:i+chunk_size]
 
-                # These shapes should now both be (X,)
                 # print(f"Chunk contrib shape: {chunk_contrib.shape}, Chunk uncert shape: {chunk_uncert.shape}")
-
-                # Now, (X,) & (X,) will result in (X,), which is what you want for a 1D mask
                 #chunk_mask = (chunk_contrib > contrib_threshold) & (chunk_uncert < uncert_threshold)
                 self_mask_chunks.append(chunk_mask)"""
             """
 
-            # These shapes should now be (10000,) or (951,)
             #for k, chunk in enumerate(self_mask_chunks):
                 #print(f"Final chunk {k} shape (before cat): {chunk.shape}")
 

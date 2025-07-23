@@ -227,8 +227,6 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
 
 
                 #primal_points = model.primal_points.clone().detach()
-
-                # Make sure inputs require grad
                 
                 
 
@@ -312,7 +310,6 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
                     if param.grad is not None:
                         print(f"Deform field param {name} grad norm: {param.grad.norm().item()}")"""
 
-                # For the model (optional, since this is a secondary path)
                 """for name, param in model.named_parameters():
                     if param.grad is not None:
                         print(f"Model param {name} grad norm: {param.grad.norm().item()}")"""
