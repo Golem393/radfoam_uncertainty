@@ -25,10 +25,6 @@ np.random.seed(seed)
 
 
 def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_depth=True, save_images=False):
-    if args.modelfile:
-        model_file = args.modelfile
-    else:
-        model_file = "model.pt"
     checkpoint = args.config.replace("/config.yaml", "")
     os.makedirs(os.path.join(checkpoint, "test"), exist_ok=True)
     device = torch.device(args.device)

@@ -34,6 +34,7 @@ class UncertaintyViewer:
             warmup=pipeline_args.densify_from,
             max_iterations=pipeline_args.iterations,
         )
+        return rgba_output
 
     
         self.hessian = torch.tensor(np.load(hessian_path)).to(self.device)
