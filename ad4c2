@@ -39,4 +39,6 @@ X11Forwarding yes
 X11UseLocalhost yes
 
 
+python train.py -c configs/mipnerf360_outdoor.yaml
+
 

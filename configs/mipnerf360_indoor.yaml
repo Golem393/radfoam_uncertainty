@@ -1,17 +1,17 @@
 # Model Parameters
 sh_degree: 3
-init_points: 90_000  #131_072
-final_points: 500_000 #2_097_152
+init_points: 40_000  # 131_072
+final_points: 500_000  # 2_097_15
 activation_scale: 1
 device: cuda
 
 # Pipeline Parameters
-iterations: 20_000
+iterations: 17_500 #20_000
 densify_from: 2_000
-densify_until: 11_000
-densify_factor: 1.15
+densify_until: 14_000
+densify_factor: 1.4
 white_background: true
-quantile_weight: 1e-4
+quantile_weight: 1e-5
 viewer: false                          # Flag to use viewer
 debug: false                           # Flag to not use tensorboard
 
@@ -23,12 +23,12 @@ density_lr_final: 1e-2
 attributes_lr_init: 5e-3
 attributes_lr_final: 5e-4
 sh_factor: 0.1
-freeze_points: 18_000                  # Points are frozen after this cycle
+freeze_points: 9_500                  # Points are frozen after this cycle
 
 # Dataset Parameters
 dataset: "colmap"
-data_path: "data/mipnerf360"
+data_path: "/mnt/hdd/team4/data/mipnerf360"
 scene: "bonsai"
 patch_based: false
-downsample: [8,4] #[4, 2]                    # Image downsample factors
+downsample: [8, 4]              # Image downsample factors
 downsample_iterations: [0, 5_000]

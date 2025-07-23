@@ -7,6 +7,7 @@ from PIL import Image
 import configargparse
 import tqdm
 import warnings
+from radfoam_model.render import TraceRays
 
 warnings.filterwarnings("ignore")
 
@@ -18,7 +19,10 @@ from data_loader import DataHandler
 from configs import *
 from radfoam_model.scene import RadFoamScene
 from radfoam_model.utils import psnr
+from uncertainty import ComputeUncertainty, log_uncertainty_metrics
 import radfoam
+from hessian_approximater import HessianAutograd
+from hessian_app import HessianApp
 
 
 seed = 42
@@ -58,7 +62,7 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
         )
     )
     train_data_handler = DataHandler(
-        dataset_args, rays_per_batch=250_000, device=device
+        dataset_args, rays_per_batch=750_000, device=device
     )
     downsample = iter2downsample[0]
     train_data_handler.reload(split="train", downsample=downsample)
@@ -86,12 +90,17 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
     # Setting up pipeline
     rgb_loss = nn.SmoothL1Loss(reduction="none")
 
+    #Setting up Uncertainty computer
+    uncertainty_computer = ComputeUncertainty(args, pipeline_args,
+                                             model_args, optimizer_args,
+                                             dataset_args)
+
     # Setting up model
     model = RadFoamScene(
         args=model_args,
         device=device,
         points=train_data_handler.points3D,
-        points_colors=train_data_handler.points3D_colors,
+        points_colors=train_data_handler.points3D_colors
     )
 
     # Setting up optimizer
@@ -201,7 +210,97 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
                     2 * i / pipeline_args.iterations, 1
                 )
 
-                loss = color_loss.mean() + opacity_loss + w_depth * quant_loss
+                uncertainty = uncertainty_computer.get_ray_uncertainty(ray_batch, model)
+                #confidence = 1 - uncertainty
+                #weighted_color_loss = confidence.unsqueeze(1) * color_loss
+                #w_uncertainty = 0.01
+                #uncertainty_penalty = w_uncertainty * uncertainty
+                #if i > 10000 and i % 2 == 0:
+                    #loss = weighted_color_loss.mean() + opacity_loss + w_depth * quant_loss + uncertainty_penalty.mean()
+                #else:
+                #loss = color_loss.mean()
+                loss = color_loss.mean() + opacity_loss + w_depth * quant_loss #+ uncertainty_penalty.mean()"""
+
+                #jtj_loss = JTJLoss(model)
+                #print(jtj_loss)
+                #jtj_loss.backward()
+
+
+                #primal_points = model.primal_points.clone().detach()
+
+                # Make sure inputs require grad
+                
+                
+
+                """hessian_fn = HessianAutograd.apply
+                gradients = hessian_fn(ray_batch, model, 0)
+                print(gradients.shape)
+                gradients.backward()"""
+                #g = HessianApp(model)
+                
+                #h = g.forward(ray_batch, primal_points)
+                #print("h:", h.shape)
+                #print(h)
+                #exit(1)
+                """primal_points = model.primal_points.clone().detach()
+                offsets = torch.ones_like(primal_points) * 0.01 * torch.randn_like(primal_points)
+                #offsets_1 = self.deform_field(normalized_points).clone().detach()#offsets#.clone().detach()
+                offsets.requires_grad = True
+                deformed_points = primal_points + offsets
+
+                rgba_output2, depth2, ray_samples2, _, _ = model(
+                    ray_batch,
+                    primal_points=deformed_points
+                )
+                print(f"rgba_output2.requires_grad: {rgba_output2.requires_grad}")
+                
+
+                gradients = []
+                TraceRays.RETAIN_GRAPH = True #if i < 2 else False
+                rgb = rgba_output2.view(-1, 3)
+                colors = torch.sum(rgb, dim=0)
+                grad_output = torch.zeros_like(colors)  # No requires_grad yet
+                grad_output[i] = 1.0
+                grad_output.requires_grad_()
+                #grad_output.requires_grad = True
+
+                print(f"colors.requires_grad: {colors.requires_grad}")
+                print(f"offsets.requires_grad: {offsets.requires_grad}")
+
+                #grad = torch.autograd.grad(colors, offsets, grad_outputs=grad_output, 
+                                        #retain_graph=True, create_graph=True)[0]#.clone().detach()
+                grad_from_autograd = torch.autograd.grad(
+                    colors, 
+                    offsets, 
+                    grad_outputs=grad_output, 
+                    retain_graph=True, 
+                    create_graph=True,
+                    allow_unused=True  # Add this to be safe
+                )[0]
+                #print(f"grad.requires_grad: {grad.requires_grad}")
+                #print(f"grad.grad_fn: {grad.grad_fn}")
+                #gradients.append(grad.view(-1, 3))
+
+                loss = grad_from_autograd.mean()
+                print(f"loss: {loss.item()}")"""
+                #exit(1)
+
+                inde = 59
+
+                with open(f"uncertainty_loss_log{inde}.txt", "a") as f:
+                    f.write(f"{i} {uncertainty.mean()}\n")
+                #with open(f"uncertainty_penalty_loss_log{inde}.txt", "a") as f:
+                    #f.write(f"{i} {uncertainty_penalty.mean()}\n")
+                with open(f"color_loss_log{inde}.txt", "a") as f:
+                    f.write(f"{i} {color_loss.mean().item()}\n")
+                #with open(f"weighted_color_loss_log{inde}.txt", "a") as f:
+                    #f.write(f"{i} {weighted_color_loss.mean().item()}\n")
+                with open(f"opacity_loss_log{inde}.txt", "a") as f:
+                    f.write(f"{i} {opacity_loss.item()}\n")
+                with open(f"quant_loss_log{inde}.txt", "a") as f:
+                    f.write(f"{i} {w_depth * quant_loss.item()}\n")
+
+                
 
                 model.optimizer.zero_grad(set_to_none=True)
 
@@ -209,6 +308,15 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
                 event = torch.cuda.Event()
                 event.record()
                 loss.backward()
+                """for name, param in uncertainty_computer.deform_field.named_parameters():
+                    if param.grad is not None:
+                        print(f"Deform field param {name} grad norm: {param.grad.norm().item()}")"""
+
+                # For the model (optional, since this is a secondary path)
+                """for name, param in model.named_parameters():
+                    if param.grad is not None:
+                        print(f"Model param {name} grad norm: {param.grad.norm().item()}")"""
+
                 event.synchronize()
                 ray_batch, rgb_batch, alpha_batch = next(data_iterator)
 
@@ -216,6 +324,14 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
                 model.update_learning_rate(i)
 
                 train.set_postfix(color_loss=f"{color_loss.mean().item():.5f}")
+
+                if i % 500 == 0:
+                    point_uncertainty = uncertainty_computer.get_prune_uncertainty(model)
+                    log_uncertainty_metrics(
+                        point_uncertainty=point_uncertainty.squeeze(),
+                        label=f"Training epoch{i}",
+                        log_file="uncertainty_log.txt"
+                    )
 
                 if i % 100 == 99 and not pipeline_args.debug:
                     writer.add_scalar("train/rgb_loss", color_loss.mean(), i)
@@ -259,14 +375,30 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
                     point_error, point_contribution = model.collect_error_map(
                         train_data_handler, pipeline_args.white_background
                     )
+                    #uncertainty_computer.determine_hessian(model)
+                    point_uncertainty = uncertainty_computer.get_prune_uncertainty(model)
+                    log_uncertainty_metrics(
+                        point_uncertainty=point_uncertainty.squeeze(),
+                        label=f"Before Pruning (iter {i})",
+                        log_file="uncertainty_log.txt"
+                    )
                     model.prune_and_densify(
                         point_error,
                         point_contribution,
+                        point_uncertainty,
                         pipeline_args.densify_factor,
+                        iter = i
                     )
 
                     model.update_triangulation(incremental=False)
                     triangulation_update_period = 1
+
+                    point_uncertainty = uncertainty_computer.get_prune_uncertainty(model)
+                    log_uncertainty_metrics(
+                        point_uncertainty=point_uncertainty.squeeze(), 
+                        label=f"After Pruning (iter {i})",
+                        log_file="uncertainty_log.txt"
+                    )
                     gc.collect()
 
                     # Linear growth
@@ -311,6 +443,13 @@ def train(args, pipeline_args, model_args, optimizer_args, dataset_args):
         test_rgb_batch_fetcher,
         pipeline_args.debug,
     )
+    point_uncertainty = uncertainty_computer.get_prune_uncertainty(model)
+    log_uncertainty_metrics(
+        point_uncertainty=point_uncertainty.squeeze(),
+        label="End of Training",
+        log_file="uncertainty_log.txt"
+    )
+
 
 
 def main():

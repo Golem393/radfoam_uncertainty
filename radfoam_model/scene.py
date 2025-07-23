@@ -158,13 +158,17 @@ class RadFoamScene(torch.nn.Module):
         self.att_dc = optimizable_tensors["att_dc"]
         self.att_sh = optimizable_tensors["att_sh"]
 
-    def update_triangulation(self, rebuild=True, incremental=False):
-        if not self.primal_points.isfinite().all():
+    def update_triangulation(self, rebuild=True, incremental=False, points = None):
+        torch.cuda.empty_cache()
+        gc.collect()
+        if points == None:
+            points = self.primal_points
+        if not points.isfinite().all():
             raise RuntimeError("NaN in points")
 
         needs_permute = False
         perturbation = 1e-6
-        del_points = self.primal_points
+        del_points = points
         failures = 0
         while rebuild:
             if failures > 25:
@@ -181,8 +185,8 @@ class RadFoamScene(torch.nn.Module):
                 incremental = False
                 with torch.no_grad():
                     del_points = (
-                        self.primal_points
-                        + perturbation * torch.randn_like(self.primal_points)
+                        points
+                        + perturbation * torch.randn_like(points)
                     )
 
         if failures > 5:
@@ -193,7 +197,7 @@ class RadFoamScene(torch.nn.Module):
             perm = self.triangulation.permutation().to(torch.long)
             self.permute_points(perm)
 
-        self.aabb_tree = radfoam.build_aabb_tree(self.primal_points)
+        self.aabb_tree = radfoam.build_aabb_tree(points)
 
         self.point_adjacency = self.triangulation.point_adjacency()
         self.point_adjacency_offsets = (
@@ -206,8 +210,9 @@ class RadFoamScene(torch.nn.Module):
     def get_primal_attributes(self):
         return torch.cat([self.att_dc, self.att_sh], dim=-1)
 
-    def get_trace_data(self):
-        points = self.primal_points
+    def get_trace_data(self, points = None):
+        if points == None:
+            points = self.primal_points
         attributes = torch.cat(
             [self.get_primal_attributes(), self.get_primal_density()],
             dim=-1,
@@ -241,17 +246,19 @@ class RadFoamScene(torch.nn.Module):
         depth_quantiles=None,
         return_contribution=False,
         primal_points=None,
-        uncertainty = None
+        uncertainty = None,
+        update_triangulation = False
     ):
-        points, attributes, point_adjacency, point_adjacency_offsets = (
-            self.get_trace_data()
-        )
-
+        points = None
         if primal_points is not None:
             points = primal_points
-            self.update_triangulation(rebuild=True)
-            self.aabb_tree = radfoam.build_aabb_tree(points)
+            if update_triangulation:
+                self.update_triangulation(rebuild=True, points = points)
 
+        points, attributes, point_adjacency, point_adjacency_offsets = (
+            self.get_trace_data(points)
+        )
+        
         if start_point is None:
             start_point = self.get_starting_point(rays, points, self.aabb_tree)
         else:
@@ -509,9 +516,14 @@ class RadFoamScene(torch.nn.Module):
 
 
     def prune_and_densify(
-        self, point_error, point_contribution, upsample_factor=1.2
+        self, point_error, point_contribution, point_uncertainty, upsample_factor=1.2, uncertainty_influence_factor = 0.3,
+        iter = 0
     ):
+        torch.cuda.empty_cache()
+        gc.collect()
         with torch.no_grad():
+
+            print(f"Pruning and densifying at iteration {iter} with upsample factor {upsample_factor}")
             num_curr_points = self.primal_points.shape[0]
             num_new_points = int((upsample_factor - 1) * num_curr_points)
 
@@ -527,7 +539,87 @@ class RadFoamScene(torch.nn.Module):
             )
             farthest_neighbor = farthest_neighbor.long()
 
+            """if point_contribution.dim() == 2 and point_contribution.shape[1] == 1:
+                point_contribution = point_contribution.squeeze(1) # Squeeze specifically dimension 1"""
+
+            """contrib_based_mask = point_contribution > 1e-2
+            target_num_points = contrib_based_mask.sum().item()
+            uncert_sorted, _ = torcoutput/pruneinterp03fact3000contribnormh.sort(point_uncertainty.view(-1)) 
+            uncertainty_threshold = uncert_sorted[target_num_points - 1].item()
+
             ######################## Pruning ########################
+            """contrib_norm = (point_contribution / point_contribution.max()).clamp(0, 1).squeeze()
+            uncert_norm = (point_uncertainty / point_uncertainty.max()).clamp(0, 1).squeeze()
+            cert_norm = 1 - uncert_norm
+            contrib_norm_fixed = contrib_norm * 1000 * 3
+            prune_score = (1 - uncertainty_influence_factor) * contrib_norm_fixed + uncertainty_influence_factor * cert_norm 
+            self_mask = prune_score > 0.3"""
+            #self_mask = (point_contribution > 1e-2) & (cert_norm > 0.2)
+
+            #contrib_threshold = 0#5e-2 #* point_contribution.max()
+            #uncert_threshold = 0.3
+            gc.collect()
+            torch.cuda.empty_cache()
+            #print(f"Shape of point_contribution (after squeeze): {point_contribution.shape}")
+            #print(f"Shape of point_uncertainty (after squeeze): {point_uncertainty.shape}")
+
+            """chunk_size = 10000
+            self_mask_chunks = []
+            for i in range(0, num_curr_points, chunk_size):
+                #chunk_contrib = point_contribution[i:i+chunk_size]
+                chunk_uncert = point_uncertainty[i:i + chunk_size]
+                chunk_mask = chunk_uncert < uncert_threshold
+                #chunk_uncert = uncert_norm [i:i+chunk_size]
+
+                # These shapes should now both be (X,)
+                # print(f"Chunk contrib shape: {chunk_contrib.shape}, Chunk uncert shape: {chunk_uncert.shape}")
+
+                # Now, (X,) & (X,) will result in (X,), which is what you want for a 1D mask
+                #chunk_mask = (chunk_contrib > contrib_threshold) & (chunk_uncert < uncert_threshold)
+                self_mask_chunks.append(chunk_mask)"""
+            """
+
+            # These shapes should now be (10000,) or (951,)
+            #for k, chunk in enumerate(self_mask_chunks):
+                #print(f"Final chunk {k} shape (before cat): {chunk.shape}")
+
+            self_mask = torch.cat(self_mask_chunks, dim=0)
+
+            #self_mask = (point_contribution > contrib_threshold) & (point_uncertainty < uncert_threshold)
+            #print("Contr", point_contribution)
+            #print("Contr norm", contrib_norm)
+            #print("Uncert norm", uncert_norm)
+            #print("prune score", prune_score)"""
+            #self_mask = torch.cat(self_mask_chunks, dim=0)
+            """with open("uncertainty_thresholds.log", "a") as f:
+                f.write(f"Iter {iter}: {uncertainty_threshold:.6f}\n")
+            """
+            """def print_distribution(tensor, name, bins=[0, 1e-5, 1e-3, 1e-2, 1e-1, 0.25, 0.3, 0.5, 0.75, 0.9, 1.0, float('inf')], filename="distribution_log.txt"):
+                with open(filename, 'a') as f:  # 'a' mode for append
+                    f.write(f"\n{name} distribution:\n")
+                    hist = torch.histc(tensor, bins=len(bins)-1, min=bins[0], max=bins[-2])
+                    for i in range(len(bins) - 1):
+                        low = bins[i]
+                        high = bins[i+1]
+                        # Get mask and count
+                        count = ((tensor >= low) & (tensor < high)).sum().item()
+                        f.write(f"[{low:.1e}, {high:.1e}): {count} values\n")
+
+            # Example usage:
+            with open("distribution_log.txt", 'a') as f:
+                f.write(f"\niter {iter}\n")
+            print_distribution(point_contribution.squeeze(), "Contribution")
+            print_distribution(contrib_norm, "Contrib norm")
+            print_distribution(uncert_norm, "Uncertainty norm")
+            print_distribution(prune_score, "Prune score")"""
+
+            
+            #mask = point_contribution > 1e-2
+            #num_pruned_uncertainty = (~self_mask).sum()
+            #num_pruned_contrib_only = (~mask).sum()
+            #print("Uncertainty-aware pruned:", num_pruned_uncertainty.item())
+           # print("Contribution-only pruned:", num_pruned_contrib_only.item())
+
             self_mask = point_contribution > 1e-2
             neighbor_mask = self_mask.long()[point_adjacency.long()]
             neighbor_mask = torch.cat(
@@ -582,6 +674,8 @@ class RadFoamScene(torch.nn.Module):
 
             self.densification_postfix(new_params)
             self.prune_points(prune_mask)
+            torch.cuda.empty_cache()
+            gc.collect()
 
     def collect_error_map(self, data_handler, white_bkg=True, downsample=2):
         rays, rgbs = data_handler.rays, data_handler.rgbs

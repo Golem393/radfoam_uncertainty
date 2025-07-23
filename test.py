@@ -25,6 +25,10 @@ np.random.seed(seed)
 
 
 def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_depth=True, save_images=False):
+    if args.modelfile:
+        model_file = args.modelfile
+    else:
+        model_file = "model.pt"
     checkpoint = args.config.replace("/config.yaml", "")
     os.makedirs(os.path.join(checkpoint, "test"), exist_ok=True)
     device = torch.device(args.device)
@@ -42,10 +46,9 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
         test_data_handler.rgbs, batch_size=1, shuffle=False
     )
 
-    # Setting up model
     model = RadFoamScene(args=model_args, device=device)
 
-    model.load_pt(f"{checkpoint}/model.pt")
+    model.load_pt(f"{checkpoint}/{model_file}")
 
     def test_render(
         test_data_handler, ray_batch_fetcher, rgb_batch_fetcher
@@ -65,8 +68,8 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
         ause_rmse_list = []
         depth_break = False
 
-        lpips_model = LPIPS(net='alex').to(device)  # Initialize LPIPS model
-        ssim_metric = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)  # Initialize SSIM metric
+        lpips_model = LPIPS(net='alex').to(device)
+        ssim_metric = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
         with torch.no_grad():
             for i in range(rays.shape[0]):
@@ -81,43 +84,35 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
 
                 uncertainty = output[..., 3]
 
-                # White background
                 opacity = output[..., -1:]
                 rgb_output = output[..., :3] + (1 - opacity)
                 rgb_output = rgb_output.reshape(*rgb_batch.shape).clip(0, 1)
 
-                # Add batch dimension if missing
                 if rgb_output.dim() == 3:
-                    rgb_output = rgb_output.unsqueeze(0)  # Add batch dimension
+                    rgb_output = rgb_output.unsqueeze(0)
                 if rgb_batch.dim() == 3:
-                    rgb_batch = rgb_batch.unsqueeze(0)  # Add batch dimension
+                    rgb_batch = rgb_batch.unsqueeze(0)
                 if uncertainty.dim() == 2:
                     uncertainty = uncertainty.unsqueeze(0)
 
-                # PSNR Calculation
                 img_psnr = psnr(rgb_output, rgb_batch).mean()
                 psnr_list.append(img_psnr)
 
-                # LPIPS Calculation
                 lpips_score = lpips_model(
                     rgb_output.permute(0, 3, 1, 2), rgb_batch.permute(0, 3, 1, 2)
                 ).mean()
                 lpips_list.append(lpips_score.item())
 
-                # SSIM Calculation
                 ssim_score = ssim_metric(
                     rgb_output.permute(0, 3, 1, 2), rgb_batch.permute(0, 3, 1, 2)
                 )
                 ssim_list.append(ssim_score.item())
 
-                #uncertainty
                 if eval_depth and not depth_break:
-                    # Load scale factor
                     dataset_path = os.path.join(test_data_handler.args.data_path, test_data_handler.args.scene)
                     a = float(np.loadtxt(str(dataset_path) + '/scale_parameters.txt', delimiter=','))
                     depth = a * depth
 
-                    # Load GT depth
                     try:
                         depth_gt_dir = os.path.join(dataset_path, f'depth_gt_{i:02d}.npy')
                         depth_gt = np.load(depth_gt_dir)
@@ -127,12 +122,11 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
                         depth_break = True
 
                     if not depth_break:
-                        # Resize GT depth to match predicted depth shape
                         if depth_gt.shape != depth.shape:
                             if depth_gt.ndim == 2:
-                                depth_gt = depth_gt.unsqueeze(0).unsqueeze(0)  # [1, 1, H, W]
+                                depth_gt = depth_gt.unsqueeze(0).unsqueeze(0)
                             elif depth_gt.ndim == 3:
-                                depth_gt = depth_gt.unsqueeze(0)  # [1, H, W]
+                                depth_gt = depth_gt.unsqueeze(0)
                             if depth.ndim == 2:
                                 depth = depth.unsqueeze(0).unsqueeze(0)
                             elif depth.ndim == 3:
@@ -143,7 +137,6 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
                             if depth_gt.shape != depth.shape:
                                 depth_gt = depth_gt.squeeze()
 
-                        # Normalize
                         depth = depth / depth_gt.max()
                         depth_gt = depth_gt / depth_gt.max()
 
@@ -189,7 +182,6 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
 
                 torch.cuda.synchronize()
 
-                # Save Images
                 error = np.uint8((rgb_output.squeeze(0) - rgb_batch.squeeze(0)).cpu().abs() * 255)
                 rgb_output = np.uint8(rgb_output.squeeze(0).cpu() * 255)
                 rgb_batch = np.uint8(rgb_batch.squeeze(0).cpu() * 255)
@@ -202,19 +194,24 @@ def test(args, pipeline_args, model_args, optimizer_args, dataset_args, eval_dep
                 )
 
 
-        # Average Metrics
         average_psnr = sum(psnr_list) / len(psnr_list)
         average_lpips = sum(lpips_list) / len(lpips_list)
         average_ssim = sum(ssim_list) / len(ssim_list)
         
-        # Average scalar AUSE values
-        average_ause_mse = sum(ause_mse_list) / len(ause_mse_list)
-        average_ause_mae = sum(ause_mae_list) / len(ause_mae_list)
-        average_ause_rmse = sum(ause_rmse_list) / len(ause_rmse_list)
+        if len(ause_mse_list) == 0:
+            average_ause_mse = 0.0
+            average_ause_mae = 0.0
+            average_ause_rmse = 0.0
+        else:
+            average_ause_mse = sum(ause_mse_list) / len(ause_mse_list)
+            average_ause_mae = sum(ause_mae_list) / len(ause_mae_list)
+            average_ause_rmse = sum(ause_rmse_list) / len(ause_rmse_list)
 
-
-        # Save Metrics
-        with open(f"{checkpoint}/metrics.txt", "w") as f:
+        print(f"Average PSNR: {average_psnr:.3f}")
+        print(f"Average LPIPS: {average_lpips:.3f}")
+        print(f"Average SSIM: {average_ssim:.3f}")
+        print(f"Average AUSE (MSE): {average_ause_mse:.3f}")
+        with open(f"{checkpoint}/metrics_{model_file}.txt", "w") as f:
             f.write(f"Average PSNR: {average_psnr}\n")
             f.write(f"Average LPIPS: {average_lpips}\n")
             f.write(f"Average SSIM: {average_ssim}\n")
@@ -237,12 +234,10 @@ def main():
     pipeline_params = PipelineParams(parser)
     optimization_params = OptimizationParams(parser)
 
-    # Add argument to specify a custom config file
+    parser.add_argument('--modelfile', type=str, required=False)
     parser.add_argument(
-        "-c", "--checkpoint", help="Path to checkpoint file", default="output/bonsai@44a5858d"
+        "-c", "--config", is_config_file=True
     )
-
-    # Parse arguments
     args = parser.parse_args()
 
     test(
